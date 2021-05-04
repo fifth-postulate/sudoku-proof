@@ -1,4 +1,4 @@
-module Solver.Kernel exposing (..)
+module Solver.Kernel exposing (forced)
 
 import Set
 import Set.Util exposing (pick)

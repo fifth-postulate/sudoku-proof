@@ -1,4 +1,4 @@
-module Sudoku.Kernel exposing (Problem, Rule, Strategy, Suggestion, blockRule, cellRule, emptySudoku, hint, isSolved, shouldBe, suggest)
+module Sudoku.Kernel exposing (Problem, Rule, Strategy, Suggestion, blockRule, cellRule, emptySudoku, execute, hint, isSolved, shouldBe, suggest)
 
 import Array exposing (Array)
 import Array.Util exposing (all, indexedFoldl)
