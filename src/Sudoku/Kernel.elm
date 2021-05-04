@@ -1,7 +1,8 @@
-module Sudoku.Kernel exposing (Problem, emptySudoku, hint, isSolved)
+module Sudoku.Kernel exposing (Problem, Rule, Strategy, Suggestion, blockRule, cellRule, emptySudoku, hint, isSolved, shouldBe, suggest)
 
 import Array exposing (Array)
-import Array.Util exposing (all)
+import Array.Util exposing (all, indexedFoldl)
+import Maybe.Util exposing (orElse)
 import Set exposing (Set)
 import Sudoku.Blocks as Blocks
 
@@ -117,3 +118,73 @@ apply consequence states =
 type Consequence
     = Determine Cell Domain
     | RemoveCandidateAt Cell Domain
+
+
+type alias Strategy =
+    List Rule
+
+
+type Rule
+    = NoBlock (Set Domain -> Maybe Suggestion)
+    | SingleBlock (Set Domain -> Maybe Suggestion)
+
+
+type Suggestion
+    = ShouldBe Domain
+
+
+shouldBe : Domain -> Suggestion
+shouldBe =
+    ShouldBe
+
+
+actOn : Cell -> Suggestion -> Action
+actOn cell (ShouldBe d) =
+    Fill cell d
+
+
+cellRule : (Set Domain -> Maybe Suggestion) -> Rule
+cellRule =
+    NoBlock
+
+
+blockRule : (Set Domain -> Maybe Suggestion) -> Rule
+blockRule =
+    SingleBlock
+
+
+suggest : Strategy -> Problem -> Maybe Action
+suggest strategy problem =
+    case strategy of
+        [] ->
+            Nothing
+
+        rule :: tail ->
+            suggestFromRule rule problem
+                |> orElse (\_ -> suggest tail problem)
+
+
+suggestFromRule : Rule -> Problem -> Maybe Action
+suggestFromRule rule (Problem { states }) =
+    case rule of
+        NoBlock suggestion ->
+            let
+                pickFirstActionableSuggestion : ( Domain, State ) -> Maybe Action -> Maybe Action
+                pickFirstActionableSuggestion ( cell, currentState ) proposedAction =
+                    proposedAction
+                        |> orElse (\_ -> lift suggestion currentState |> Maybe.map (actOn cell))
+            in
+            indexedFoldl pickFirstActionableSuggestion Nothing states
+
+        SingleBlock _ ->
+            Nothing
+
+
+lift : (Set Domain -> Maybe Suggestion) -> State -> Maybe Suggestion
+lift f state =
+    case state of
+        Determined _ ->
+            Nothing
+
+        Candidates candidates ->
+            f candidates
