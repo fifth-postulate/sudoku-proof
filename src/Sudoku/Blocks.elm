@@ -1,5 +1,6 @@
-module Sudoku.Blocks exposing (sudokuBlocks)
+module Sudoku.Blocks exposing (square, sudokuBlocks, sudokuSquares)
 
+import List.Util exposing (cartesianProduct)
 import Set exposing (Set)
 
 
@@ -44,6 +45,36 @@ sudokuColumn m index =
 
 
 sudokuSquares : Int -> List (Set Cell)
-sudokuSquares _ =
-    -- TODO
-    []
+sudokuSquares n =
+    let
+        m =
+            n |> toFloat |> sqrt |> floor
+
+        base =
+            square m
+
+        block ( row, column ) =
+            Set.map (\v -> v + n * m * row + column * m) base
+
+        indices =
+            List.range 0 (m - 1)
+    in
+    cartesianProduct indices indices
+        |> List.map block
+
+
+square : Int -> Set Cell
+square m =
+    let
+        n =
+            m * m
+
+        row =
+            List.range 0 (m - 1)
+
+        addConstant constant cells =
+            List.map (\v -> v + constant) cells
+    in
+    List.range 0 (m - 1)
+        |> List.concatMap (\rowIndex -> addConstant (rowIndex * n) row)
+        |> Set.fromList
