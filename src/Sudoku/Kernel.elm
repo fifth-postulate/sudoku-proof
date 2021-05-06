@@ -1,4 +1,4 @@
-module Sudoku.Kernel exposing (Problem, Rule, Strategy, Suggestion, blockRule, cellRule, emptySudoku, execute, hint, isSolved, shouldBe, suggest)
+module Sudoku.Kernel exposing (Problem, Rule, Strategy, Suggestion, cellRule, doubleCellBlockRule, emptySudoku, execute, hint, isSolved, shouldBe, singleCellBlockRule, suggest, tripleCellBlockRule)
 
 import Array exposing (Array)
 import Array.Util exposing (all, indexedFoldl)
@@ -126,7 +126,13 @@ type alias Strategy =
 
 type Rule
     = NoBlock (Set Domain -> Maybe Suggestion)
-    | SingleBlock (Set Domain -> Maybe Suggestion)
+    | SingleBlock Signature
+
+
+type Signature
+    = OneCell (Set Domain -> Maybe Suggestion)
+    | TwoCell (Set Domain -> Set Domain -> Maybe Suggestion)
+    | ThreeCell (Set Domain -> Set Domain -> Set Domain -> Maybe Suggestion)
 
 
 type Suggestion
@@ -148,9 +154,19 @@ cellRule =
     NoBlock
 
 
-blockRule : (Set Domain -> Maybe Suggestion) -> Rule
-blockRule =
-    SingleBlock
+singleCellBlockRule : (Set Domain -> Maybe Suggestion) -> Rule
+singleCellBlockRule =
+    OneCell >> SingleBlock
+
+
+doubleCellBlockRule : (Set Domain -> Set Domain -> Maybe Suggestion) -> Rule
+doubleCellBlockRule =
+    TwoCell >> SingleBlock
+
+
+tripleCellBlockRule : (Set Domain -> Set Domain -> Set Domain -> Maybe Suggestion) -> Rule
+tripleCellBlockRule =
+    ThreeCell >> SingleBlock
 
 
 suggest : Strategy -> Problem -> Maybe Action
@@ -176,8 +192,16 @@ suggestFromRule rule (Problem { states }) =
             in
             indexedFoldl pickFirstActionableSuggestion Nothing states
 
-        SingleBlock _ ->
-            Nothing
+        SingleBlock signature ->
+            case signature of
+                OneCell suggestion ->
+                    Nothing
+
+                TwoCell suggestion ->
+                    Nothing
+
+                ThreeCell suggestion ->
+                    Nothing
 
 
 lift : (Set Domain -> Maybe Suggestion) -> State -> Maybe Suggestion
