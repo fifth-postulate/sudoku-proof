@@ -137,7 +137,7 @@ type alias Strategy =
 
 solve : Strategy
 solve (Problem { states, blocks }) =
-    firstSuggestion <| toStream states
+    firstSuggestion blocks <| toStream states
 
 
 toStream : Array State -> Stream Tree
@@ -157,15 +157,15 @@ uncurry f ( a, b ) =
     f a b
 
 
-firstSuggestion : Stream Tree -> Maybe Action
-firstSuggestion stream =
+firstSuggestion : List (Set Cell) -> Stream Tree -> Maybe Action
+firstSuggestion blocks stream =
     stream
         |> Stream.head
-        |> Maybe.andThen suggestionFromTree
+        |> Maybe.andThen (suggestionFromTree blocks)
 
 
-suggestionFromTree : ( Tree, Stream Tree ) -> Maybe Action
-suggestionFromTree ( tree, stream ) =
+suggestionFromTree : List (Set Cell) -> ( Tree, Stream Tree ) -> Maybe Action
+suggestionFromTree blocks ( tree, stream ) =
     let
         domain =
             effectiveCandidates tree
@@ -180,12 +180,19 @@ suggestionFromTree ( tree, stream ) =
             |> Maybe.map (actOn cell)
 
     else
-        -- TODO extend tree with sprouts of current tree
-        firstSuggestion stream
+        stream
+            |> Stream.afterwards (\_ -> sprout blocks tree)
+            |> firstSuggestion blocks
+
+
+sprout : List (Set Cell) -> Tree -> Stream Tree
+sprout blocks tree =
+    Stream.empty
 
 
 type Tree
     = Leaf Cell (Set Domain)
+    | Node Cell (Set Domain) (List ( Set Cell, List Tree ))
 
 
 effectiveCandidates : Tree -> Set Domain
@@ -194,11 +201,24 @@ effectiveCandidates tree =
         Leaf _ domain ->
             domain
 
+        Node _ domain children ->
+            let
+                exclude =
+                    children
+                        |> List.concatMap Tuple.second
+                        |> List.map effectiveCandidates
+                        |> List.foldl Set.union Set.empty
+            in
+            Set.diff domain exclude
+
 
 rootCell : Tree -> Cell
 rootCell tree =
     case tree of
         Leaf cell _ ->
+            cell
+
+        Node cell _ _ ->
             cell
 
 
