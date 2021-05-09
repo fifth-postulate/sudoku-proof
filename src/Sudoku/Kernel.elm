@@ -9,7 +9,7 @@ import Sudoku.Blocks as Blocks
 
 
 type Problem
-    = Problem { states : Array State, blocks : List (Set Cell) }
+    = Problem { states : Array State, blocks : List Block }
 
 
 type State
@@ -19,6 +19,10 @@ type State
 
 type alias Domain =
     Int
+
+
+type alias Block =
+    Set Cell
 
 
 type alias Cell =
@@ -135,6 +139,20 @@ type alias Strategy =
     Problem -> Maybe Action
 
 
+type Suggestion
+    = ShouldBe Domain
+
+
+shouldBe : Domain -> Suggestion
+shouldBe =
+    ShouldBe
+
+
+actOn : Cell -> Suggestion -> Action
+actOn cell (ShouldBe d) =
+    Fill cell d
+
+
 solve : Strategy
 solve (Problem { states, blocks }) =
     firstSuggestion blocks <| toStream states
@@ -157,14 +175,14 @@ uncurry f ( a, b ) =
     f a b
 
 
-firstSuggestion : List (Set Cell) -> Stream Tree -> Maybe Action
+firstSuggestion : List Block -> Stream Tree -> Maybe Action
 firstSuggestion blocks stream =
     stream
         |> Stream.head
         |> Maybe.andThen (suggestionFromTree blocks)
 
 
-suggestionFromTree : List (Set Cell) -> ( Tree, Stream Tree ) -> Maybe Action
+suggestionFromTree : List Block -> ( Tree, Stream Tree ) -> Maybe Action
 suggestionFromTree blocks ( tree, stream ) =
     let
         domain =
@@ -185,14 +203,14 @@ suggestionFromTree blocks ( tree, stream ) =
             |> firstSuggestion blocks
 
 
-sprout : List (Set Cell) -> Tree -> Stream Tree
+sprout : List Block -> Tree -> Stream Tree
 sprout blocks tree =
     Stream.empty
 
 
 type Tree
     = Leaf Cell (Set Domain)
-    | Node Cell (Set Domain) (List ( Set Cell, List Tree ))
+    | Node Cell (Set Domain) (List ( Block, List Tree ))
 
 
 effectiveCandidates : Tree -> Set Domain
@@ -220,17 +238,3 @@ rootCell tree =
 
         Node cell _ _ ->
             cell
-
-
-type Suggestion
-    = ShouldBe Domain
-
-
-shouldBe : Domain -> Suggestion
-shouldBe =
-    ShouldBe
-
-
-actOn : Cell -> Suggestion -> Action
-actOn cell (ShouldBe d) =
-    Fill cell d
