@@ -1,9 +1,10 @@
-module Sudoku.Kernel exposing (Problem, Rule, Strategy, Suggestion, cellRule, doubleCellBlockRule, emptySudoku, execute, hint, isSolved, shouldBe, singleCellBlockRule, suggest, tripleCellBlockRule)
+module Sudoku.Kernel exposing (Problem, Strategy, Suggestion, emptySudoku, execute, hint, isSolved, shouldBe, solve)
 
 import Array exposing (Array)
-import Array.Util exposing (all, indexedFoldl)
-import Maybe.Util exposing (orElse)
+import Array.Util exposing (all)
 import Set exposing (Set)
+import Set.Util exposing (pick)
+import Stream.Kernel as Stream exposing (Stream)
 import Sudoku.Blocks as Blocks
 
 
@@ -37,6 +38,16 @@ isDetermined state =
 
         _ ->
             False
+
+
+candidates : State -> Set Domain
+candidates state =
+    case state of
+        Determined _ ->
+            Set.empty
+
+        Candidates domain ->
+            domain
 
 
 emptySudoku : Int -> Problem
@@ -100,8 +111,8 @@ apply consequence states =
                         Determined v ->
                             Determined v
 
-                        Candidates candidates ->
-                            candidates
+                        Candidates domain ->
+                            domain
                                 |> Set.remove d
                                 |> Candidates
 
@@ -121,18 +132,74 @@ type Consequence
 
 
 type alias Strategy =
-    List Rule
+    Problem -> Maybe Action
 
 
-type Rule
-    = NoBlock (Set Domain -> Maybe Suggestion)
-    | SingleBlock Signature
+solve : Strategy
+solve (Problem { states, blocks }) =
+    firstSuggestion <| toStream states
 
 
-type Signature
-    = OneCell (Set Domain -> Maybe Suggestion)
-    | TwoCell (Set Domain -> Set Domain -> Maybe Suggestion)
-    | ThreeCell (Set Domain -> Set Domain -> Set Domain -> Maybe Suggestion)
+toStream : Array State -> Stream Tree
+toStream cells =
+    cells
+        |> Array.indexedMap Tuple.pair
+        |> Array.filter (Tuple.second >> isDetermined >> not)
+        |> Array.toList
+        |> List.sortBy (Tuple.second >> candidates >> Set.size)
+        |> List.map (Tuple.mapSecond candidates)
+        |> List.map (uncurry Leaf)
+        |> Stream.fromList
+
+
+uncurry : (a -> b -> c) -> ( a, b ) -> c
+uncurry f ( a, b ) =
+    f a b
+
+
+firstSuggestion : Stream Tree -> Maybe Action
+firstSuggestion stream =
+    stream
+        |> Stream.head
+        |> Maybe.andThen suggestionFromTree
+
+
+suggestionFromTree : ( Tree, Stream Tree ) -> Maybe Action
+suggestionFromTree ( tree, stream ) =
+    let
+        domain =
+            effectiveCandidates tree
+
+        cell =
+            rootCell tree
+    in
+    if Set.size domain == 1 then
+        domain
+            |> pick
+            |> Maybe.map shouldBe
+            |> Maybe.map (actOn cell)
+
+    else
+        -- TODO extend tree with sprouts of current tree
+        firstSuggestion stream
+
+
+type Tree
+    = Leaf Cell (Set Domain)
+
+
+effectiveCandidates : Tree -> Set Domain
+effectiveCandidates tree =
+    case tree of
+        Leaf _ domain ->
+            domain
+
+
+rootCell : Tree -> Cell
+rootCell tree =
+    case tree of
+        Leaf cell _ ->
+            cell
 
 
 type Suggestion
@@ -147,68 +214,3 @@ shouldBe =
 actOn : Cell -> Suggestion -> Action
 actOn cell (ShouldBe d) =
     Fill cell d
-
-
-cellRule : (Set Domain -> Maybe Suggestion) -> Rule
-cellRule =
-    NoBlock
-
-
-singleCellBlockRule : (Set Domain -> Maybe Suggestion) -> Rule
-singleCellBlockRule =
-    OneCell >> SingleBlock
-
-
-doubleCellBlockRule : (Set Domain -> Set Domain -> Maybe Suggestion) -> Rule
-doubleCellBlockRule =
-    TwoCell >> SingleBlock
-
-
-tripleCellBlockRule : (Set Domain -> Set Domain -> Set Domain -> Maybe Suggestion) -> Rule
-tripleCellBlockRule =
-    ThreeCell >> SingleBlock
-
-
-suggest : Strategy -> Problem -> Maybe Action
-suggest strategy problem =
-    case strategy of
-        [] ->
-            Nothing
-
-        rule :: tail ->
-            suggestFromRule rule problem
-                |> orElse (\_ -> suggest tail problem)
-
-
-suggestFromRule : Rule -> Problem -> Maybe Action
-suggestFromRule rule (Problem { states }) =
-    case rule of
-        NoBlock suggestion ->
-            let
-                pickFirstActionableSuggestion : ( Domain, State ) -> Maybe Action -> Maybe Action
-                pickFirstActionableSuggestion ( cell, currentState ) proposedAction =
-                    proposedAction
-                        |> orElse (\_ -> lift suggestion currentState |> Maybe.map (actOn cell))
-            in
-            indexedFoldl pickFirstActionableSuggestion Nothing states
-
-        SingleBlock signature ->
-            case signature of
-                OneCell suggestion ->
-                    Nothing
-
-                TwoCell suggestion ->
-                    Nothing
-
-                ThreeCell suggestion ->
-                    Nothing
-
-
-lift : (Set Domain -> Maybe Suggestion) -> State -> Maybe Suggestion
-lift f state =
-    case state of
-        Determined _ ->
-            Nothing
-
-        Candidates candidates ->
-            f candidates

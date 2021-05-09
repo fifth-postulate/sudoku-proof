@@ -1,15 +1,14 @@
 module SolverTest exposing (..)
 
 import Expect
-import Solver.Kernel as Solver
-import Sudoku.Kernel as Sudoku exposing (Problem, Strategy, hint)
+import Sudoku.Kernel as Sudoku exposing (Problem, hint)
 import Test exposing (..)
 
 
 suite : Test
 suite =
-    describe "Solver"
-        [ describe "forced"
+    describe "Sudoku"
+        [ describe "solve"
             [ let
                 problem =
                     Sudoku.emptySudoku 4
@@ -25,13 +24,13 @@ suite =
                         |> hint 3 4
                         |> Just
               in
-              strategyTest "baby sudoku with forced rule" problem expected
+              solveTest "forced" problem expected
+
             -- , let
             --     problem =
             --         Sudoku.emptySudoku 4
             --             |> hint 0 1
             --             |> hint 6 4
-
             --     expected =
             --         Sudoku.emptySudoku 4
             --             |> hint 0 1
@@ -44,20 +43,13 @@ suite =
         ]
 
 
-strategy : Strategy
-strategy =
-    [ Solver.forced
-    , Solver.singleRemaining
-    ]
-
-
-strategyTest : String -> Problem -> Maybe Problem -> Test
-strategyTest description problem expected =
+solveTest : String -> Problem -> Maybe Problem -> Test
+solveTest description problem expected =
     test description <|
         \_ ->
             let
                 suggestion =
-                    Sudoku.suggest strategy problem
+                    Sudoku.solve problem
 
                 actual =
                     suggestion
