@@ -2,7 +2,6 @@ module Sudoku.Kernel exposing (Problem, Strategy, Suggestion, emptySudoku, execu
 
 import Array exposing (Array)
 import Array.Util exposing (all)
-import Debug
 import Set exposing (Set)
 import Set.Util exposing (pick)
 import Stream.Kernel as Stream exposing (Stream)
@@ -195,11 +194,23 @@ rootCell tree =
 
 toStream : Array State -> Stream Tree
 toStream cells =
+    let
+        size state =
+            Set.size <| candidates <| state
+
+        order ( leftCell, leftState ) ( rightCell, rightState ) =
+            case compare (size leftState) (size rightState) of
+                EQ ->
+                    compare leftCell rightCell
+
+                _ as o ->
+                    o
+    in
     cells
         |> Array.indexedMap Tuple.pair
         |> Array.filter (Tuple.second >> isDetermined >> not)
         |> Array.toList
-        |> List.sortBy (Tuple.second >> candidates >> Set.size)
+        |> List.sortWith order
         |> List.map (Tuple.mapSecond candidates)
         |> List.map (uncurry Leaf)
         |> Stream.fromList
