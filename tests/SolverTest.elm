@@ -26,19 +26,19 @@ suite =
               in
               solveTest "forced" problem expected
 
-            -- , let
-            --     problem =
-            --         Sudoku.emptySudoku 4
-            --             |> hint 0 1
-            --             |> hint 6 4
-            --     expected =
-            --         Sudoku.emptySudoku 4
-            --             |> hint 0 1
-            --             |> hint 6 4
-            --             |> hint 1 4
-            --             |> Just
-            --   in
-            --   strategyTest "baby sudoku with singleRemaining" problem expected
+            , let
+                problem =
+                    Sudoku.emptySudoku 4
+                        |> hint 0 1
+                        |> hint 6 4
+                expected =
+                    Sudoku.emptySudoku 4
+                        |> hint 0 1
+                        |> hint 6 4
+                        |> hint 1 4
+                        |> Just
+              in
+              solveTest "baby sudoku with singleRemaining" problem expected
             ]
         ]
 

@@ -2,6 +2,7 @@ module Sudoku.Kernel exposing (Problem, Strategy, Suggestion, emptySudoku, execu
 
 import Array exposing (Array)
 import Array.Util exposing (all)
+import Debug
 import Set exposing (Set)
 import Set.Util exposing (pick)
 import Stream.Kernel as Stream exposing (Stream)
@@ -154,58 +155,10 @@ actOn cell (ShouldBe d) =
 
 
 solve : Strategy
-solve (Problem { states, blocks }) =
-    firstSuggestion blocks <| toStream states
-
-
-toStream : Array State -> Stream Tree
-toStream cells =
-    cells
-        |> Array.indexedMap Tuple.pair
-        |> Array.filter (Tuple.second >> isDetermined >> not)
-        |> Array.toList
-        |> List.sortBy (Tuple.second >> candidates >> Set.size)
-        |> List.map (Tuple.mapSecond candidates)
-        |> List.map (uncurry Leaf)
-        |> Stream.fromList
-
-
-uncurry : (a -> b -> c) -> ( a, b ) -> c
-uncurry f ( a, b ) =
-    f a b
-
-
-firstSuggestion : List Block -> Stream Tree -> Maybe Action
-firstSuggestion blocks stream =
-    stream
-        |> Stream.head
-        |> Maybe.andThen (suggestionFromTree blocks)
-
-
-suggestionFromTree : List Block -> ( Tree, Stream Tree ) -> Maybe Action
-suggestionFromTree blocks ( tree, stream ) =
-    let
-        domain =
-            effectiveCandidates tree
-
-        cell =
-            rootCell tree
-    in
-    if Set.size domain == 1 then
-        domain
-            |> pick
-            |> Maybe.map shouldBe
-            |> Maybe.map (actOn cell)
-
-    else
-        stream
-            |> Stream.afterwards (\_ -> sprout blocks tree)
-            |> firstSuggestion blocks
-
-
-sprout : List Block -> Tree -> Stream Tree
-sprout blocks tree =
-    Stream.empty
+solve ((Problem { states }) as problem) =
+    states
+        |> toStream
+        |> firstSuggestion problem
 
 
 type Tree
@@ -238,3 +191,87 @@ rootCell tree =
 
         Node cell _ _ ->
             cell
+
+
+toStream : Array State -> Stream Tree
+toStream cells =
+    cells
+        |> Array.indexedMap Tuple.pair
+        |> Array.filter (Tuple.second >> isDetermined >> not)
+        |> Array.toList
+        |> List.sortBy (Tuple.second >> candidates >> Set.size)
+        |> List.map (Tuple.mapSecond candidates)
+        |> List.map (uncurry Leaf)
+        |> Stream.fromList
+
+
+uncurry : (a -> b -> c) -> ( a, b ) -> c
+uncurry f ( a, b ) =
+    f a b
+
+
+firstSuggestion : Problem -> Stream Tree -> Maybe Action
+firstSuggestion problem stream =
+    stream
+        |> Stream.head
+        |> Maybe.andThen (suggestionFromTree problem)
+
+
+suggestionFromTree : Problem -> ( Tree, Stream Tree ) -> Maybe Action
+suggestionFromTree problem ( tree, stream ) =
+    let
+        domain =
+            effectiveCandidates tree
+    in
+    if Set.size domain == 1 then
+        domain
+            |> pick
+            |> Maybe.map shouldBe
+            |> Maybe.map (actOn <| rootCell tree)
+
+    else
+        stream
+            |> Stream.afterwards (\_ -> sprout problem tree)
+            |> firstSuggestion problem
+
+
+sprout : Problem -> Tree -> Stream Tree
+sprout ((Problem { blocks }) as problem) tree =
+    case tree of
+        Leaf cell domain ->
+            blocks
+                |> List.filter (Set.member cell)
+                |> List.map (leafSproutPromise problem cell domain)
+                |> List.foldl Stream.afterwards Stream.empty
+
+        Node cell domain children ->
+            Stream.empty
+
+
+leafSproutPromise : Problem -> Cell -> Set Domain -> Block -> () -> Stream Tree
+leafSproutPromise (Problem { states }) cell domain block =
+    let
+        trees =
+            block
+                |> Set.remove cell
+                |> Set.filter hasCandidates
+                |> Set.toList
+                |> List.map toLeaf
+
+        hasCandidates candidate =
+            states
+                |> Array.get candidate
+                |> Maybe.map (not << isDetermined)
+                |> Maybe.withDefault False
+
+        toLeaf c =
+            let
+                d =
+                    states
+                        |> Array.get c
+                        |> Maybe.map candidates
+                        |> Maybe.withDefault Set.empty
+            in
+            Leaf c d
+    in
+    \_ -> Stream.singleton <| Node cell domain [ ( block, trees ) ]
