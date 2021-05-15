@@ -256,7 +256,19 @@ sprout ((Problem { blocks }) as problem) tree =
                 |> List.foldl Stream.afterwards Stream.empty
 
         Node cell domain children ->
-            Stream.empty
+            let
+                usedBlocks =
+                    children
+                        |> List.map Tuple.first
+
+                rootStream =
+                    blocks
+                        |> List.filter (Set.member cell)
+                        |> List.filter (\b -> not <| List.member b usedBlocks)
+                        |> List.map (leafSproutPromise problem cell domain)
+                        |> List.foldl Stream.afterwards Stream.empty
+            in
+            rootStream
 
 
 leafSproutPromise : Problem -> Cell -> Set Domain -> Block -> () -> Stream Tree
