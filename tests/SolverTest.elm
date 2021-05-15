@@ -25,12 +25,12 @@ suite =
                         |> Just
               in
               solveTest "forced" problem expected
-
             , let
                 problem =
                     Sudoku.emptySudoku 4
                         |> hint 0 1
                         |> hint 6 4
+
                 expected =
                     Sudoku.emptySudoku 4
                         |> hint 0 1

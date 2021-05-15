@@ -162,7 +162,7 @@ solve ((Problem { states }) as problem) =
 
 type Tree
     = Leaf Cell (Set Domain)
-    | Node Cell (Set Domain) (List ( Block, List Tree ))
+    | Node Cell (Set Domain) (Array ( Block, List Tree ))
 
 
 effectiveCandidates : Tree -> Set Domain
@@ -175,6 +175,7 @@ effectiveCandidates tree =
             let
                 exclude =
                     children
+                        |> Array.toList
                         |> List.concatMap Tuple.second
                         |> List.map effectiveCandidates
                         |> List.foldl Set.union Set.empty
@@ -259,12 +260,13 @@ sprout ((Problem { blocks }) as problem) tree =
             let
                 usedBlocks =
                     children
-                        |> List.map Tuple.first
+                        |> Array.map Tuple.first
 
                 rootStream =
                     blocks
                         |> List.filter (Set.member cell)
-                        |> List.filter (\b -> not <| List.member b usedBlocks)
+                        |> List.filter (\b -> not <| member b usedBlocks)
+                        -- TODO do not use leafSproutPromise
                         |> List.map (leafSproutPromise problem cell domain)
                         |> List.foldl Stream.afterwards Stream.empty
             in
@@ -297,4 +299,22 @@ leafSproutPromise (Problem { states }) cell domain block =
             in
             Leaf c d
     in
-    \_ -> Stream.singleton <| Node cell domain [ ( block, trees ) ]
+    \_ -> Stream.singleton <| Node cell domain <| Array.repeat 1 ( block, trees ) 
+
+
+member : a -> Array a -> Bool
+member =
+    memberFrom 0
+
+
+memberFrom : Int -> a -> Array a -> Bool
+memberFrom index needle haystack =
+    if index < Array.length haystack then
+        if Array.get index haystack == Just needle then
+            True
+
+        else
+            memberFrom (index + 1) needle haystack
+
+    else
+        False
