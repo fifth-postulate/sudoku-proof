@@ -1,7 +1,7 @@
 module Sudoku.Kernel exposing (Problem, Strategy, Suggestion, emptySudoku, execute, hint, isSolved, shouldBe, solve)
 
 import Array exposing (Array)
-import Array.Util exposing (all)
+import Array.Util exposing (all, member)
 import Set exposing (Set)
 import Set.Util exposing (pick)
 import Stream.Kernel as Stream exposing (Stream)
@@ -328,21 +328,3 @@ addBlockToRoot (Problem { states }) tree block =
             Leaf c d
     in
     \_ -> Stream.singleton <| Node cell domain <| Array.push ( block, trees ) children
-
-
-member : a -> Array a -> Bool
-member =
-    memberFrom 0
-
-
-memberFrom : Int -> a -> Array a -> Bool
-memberFrom index needle haystack =
-    if index < Array.length haystack then
-        if Array.get index haystack == Just needle then
-            True
-
-        else
-            memberFrom (index + 1) needle haystack
-
-    else
-        False

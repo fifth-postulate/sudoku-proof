@@ -1,4 +1,4 @@
-module Array.Util exposing (all, indexedFoldl)
+module Array.Util exposing (all, indexedFoldl, member)
 
 import Array exposing (Array)
 
@@ -15,3 +15,21 @@ indexedFoldl transform seed array =
     array
         |> Array.indexedMap (\index value -> ( index, value ))
         |> Array.foldl transform seed
+
+
+member : a -> Array a -> Bool
+member =
+    memberFrom 0
+
+
+memberFrom : Int -> a -> Array a -> Bool
+memberFrom index needle haystack =
+    if index < Array.length haystack then
+        if Array.get index haystack == Just needle then
+            True
+
+        else
+            memberFrom (index + 1) needle haystack
+
+    else
+        False
