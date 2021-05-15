@@ -193,6 +193,26 @@ rootCell tree =
             cell
 
 
+rootDomain : Tree -> Set Domain
+rootDomain tree =
+    case tree of
+        Leaf _ domain ->
+            domain
+
+        Node _ domain _ ->
+            domain
+
+
+rootChildren : Tree -> Array ( Block, List Tree )
+rootChildren tree =
+    case tree of
+        Leaf _ _ ->
+            Array.empty
+
+        Node _ _ children ->
+            children
+
+
 toStream : Array State -> Stream Tree
 toStream cells =
     let
@@ -250,13 +270,13 @@ suggestionFromTree problem ( tree, stream ) =
 sprout : Problem -> Tree -> Stream Tree
 sprout ((Problem { blocks }) as problem) tree =
     case tree of
-        Leaf cell domain ->
+        Leaf cell _ ->
             blocks
                 |> List.filter (Set.member cell)
-                |> List.map (leafSproutPromise problem cell domain)
+                |> List.map (addBlockToRoot problem tree)
                 |> List.foldl Stream.afterwards Stream.empty
 
-        Node cell domain children ->
+        Node cell _ children ->
             let
                 usedBlocks =
                     children
@@ -266,16 +286,24 @@ sprout ((Problem { blocks }) as problem) tree =
                     blocks
                         |> List.filter (Set.member cell)
                         |> List.filter (\b -> not <| member b usedBlocks)
-                        -- TODO do not use leafSproutPromise
-                        |> List.map (leafSproutPromise problem cell domain)
+                        |> List.map (addBlockToRoot problem tree)
                         |> List.foldl Stream.afterwards Stream.empty
             in
             rootStream
 
 
-leafSproutPromise : Problem -> Cell -> Set Domain -> Block -> () -> Stream Tree
-leafSproutPromise (Problem { states }) cell domain block =
+addBlockToRoot : Problem -> Tree -> Block -> () -> Stream Tree
+addBlockToRoot (Problem { states }) tree block =
     let
+        cell =
+            rootCell tree
+
+        domain =
+            rootDomain tree
+
+        children =
+            rootChildren tree
+
         trees =
             block
                 |> Set.remove cell
@@ -299,7 +327,7 @@ leafSproutPromise (Problem { states }) cell domain block =
             in
             Leaf c d
     in
-    \_ -> Stream.singleton <| Node cell domain <| Array.repeat 1 ( block, trees ) 
+    \_ -> Stream.singleton <| Node cell domain <| Array.push ( block, trees ) children
 
 
 member : a -> Array a -> Bool
