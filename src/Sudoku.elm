@@ -78,6 +78,10 @@ hint cell d =
     execute (Fill cell d)
 
 
+type Action
+    = Fill Cell Domain
+
+
 execute : Action -> Problem -> Problem
 execute (Fill cell d) (Problem problem) =
     let
@@ -96,8 +100,9 @@ execute (Fill cell d) (Problem problem) =
     Problem { problem | states = states }
 
 
-type Action
-    = Fill Cell Domain
+type Consequence
+    = Determine Cell Domain
+    | RemoveCandidateAt Cell Domain
 
 
 apply : Consequence -> Array State -> Array State
@@ -130,11 +135,6 @@ apply consequence states =
                 |> Maybe.withDefault states
 
 
-type Consequence
-    = Determine Cell Domain
-    | RemoveCandidateAt Cell Domain
-
-
 type alias Strategy =
     Problem -> Maybe Action
 
@@ -156,31 +156,13 @@ actOn cell (ShouldBe d) =
 solve : Strategy
 solve ((Problem { states }) as problem) =
     states
-        |> toStream
+        |> toTreeStream
         |> firstSuggestion problem
 
 
 type Tree
     = Leaf Cell (Set Domain)
     | Node Cell (Set Domain) (Array ( Block, List Tree ))
-
-
-effectiveCandidates : Tree -> Set Domain
-effectiveCandidates tree =
-    case tree of
-        Leaf _ domain ->
-            domain
-
-        Node _ domain children ->
-            let
-                exclude =
-                    children
-                        |> Array.toList
-                        |> List.concatMap Tuple.second
-                        |> List.map effectiveCandidates
-                        |> List.foldl Set.union Set.empty
-            in
-            Set.diff domain exclude
 
 
 rootCell : Tree -> Cell
@@ -213,12 +195,27 @@ rootChildren tree =
             children
 
 
-toStream : Array State -> Stream Tree
-toStream cells =
-    let
-        size state =
-            Set.size <| candidates <| state
+effectiveCandidates : Tree -> Set Domain
+effectiveCandidates tree =
+    case tree of
+        Leaf _ domain ->
+            domain
 
+        Node _ domain children ->
+            let
+                exclude =
+                    children
+                        |> Array.toList
+                        |> List.concatMap Tuple.second
+                        |> List.map effectiveCandidates
+                        |> List.foldl Set.union Set.empty
+            in
+            Set.diff domain exclude
+
+
+toTreeStream : Array State -> Stream Tree
+toTreeStream cells =
+    let
         order ( leftCell, leftState ) ( rightCell, rightState ) =
             case compare (size leftState) (size rightState) of
                 EQ ->
@@ -226,6 +223,9 @@ toStream cells =
 
                 _ as o ->
                     o
+
+        size state =
+            Set.size <| candidates <| state
     in
     cells
         |> Array.indexedMap Tuple.pair
