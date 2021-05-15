@@ -1,10 +1,10 @@
-module Sudoku.Kernel exposing (Problem, Strategy, Suggestion, emptySudoku, execute, hint, isSolved, shouldBe, solve)
+module Sudoku exposing (Problem, Strategy, Suggestion, emptySudoku, execute, hint, isSolved, shouldBe, solve)
 
 import Array exposing (Array)
 import Array.Util exposing (all, member)
 import Set exposing (Set)
 import Set.Util exposing (pick)
-import Stream.Kernel as Stream exposing (Stream)
+import Stream exposing (Stream)
 import Sudoku.Blocks as Blocks
 
 

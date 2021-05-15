@@ -1,7 +1,5 @@
 module Stream.Queue exposing (Queue, append, empty, fromList, popBack, popFront, pushBack, pushFront, toList)
 
-import Html exposing (a)
-
 
 type Queue a
     = Queue { front : List a, back : List a }

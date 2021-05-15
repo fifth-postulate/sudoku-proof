@@ -2,7 +2,7 @@ module StreamTest exposing (..)
 
 import Expect
 import Fuzz exposing (int, list)
-import Stream.Kernel as Stream exposing (Stream)
+import Stream exposing (Stream)
 import Test exposing (..)
 
 

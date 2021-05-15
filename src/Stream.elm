@@ -1,4 +1,4 @@
-module Stream.Kernel exposing (Stream, afterwards, empty, fromList, head, singleton)
+module Stream exposing (Stream, afterwards, empty, fromList, head, singleton)
 
 import Stream.Queue as Queue exposing (Queue)
 

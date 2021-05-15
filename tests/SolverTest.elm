@@ -1,7 +1,7 @@
 module SolverTest exposing (..)
 
 import Expect
-import Sudoku.Kernel as Sudoku exposing (Problem, hint)
+import Sudoku exposing (Problem, hint)
 import Test exposing (..)
 
 
