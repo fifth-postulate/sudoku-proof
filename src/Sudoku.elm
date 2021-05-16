@@ -1,7 +1,10 @@
 module Sudoku exposing (Problem, Strategy, Suggestion, emptySudoku, execute, hint, isSolved, shouldBe, solve)
 
 import Array exposing (Array)
-import Array.Util exposing (all, member)
+import Array.Util as Util exposing (member)
+import Css exposing (..)
+import Html.Styled as Html exposing (Html)
+import Html.Styled.Attributes as Attribute
 import Set exposing (Set)
 import Set.Util exposing (pick)
 import Stream exposing (Stream)
@@ -31,7 +34,7 @@ type alias Cell =
 
 isSolved : Problem -> Bool
 isSolved (Problem { states }) =
-    all isDetermined states
+    Util.all isDetermined states
 
 
 isDetermined : State -> Bool
@@ -365,3 +368,72 @@ addBlockToRoot (Problem { states }) tree block =
             Leaf c d
     in
     \_ -> Stream.singleton <| Node cell domain <| Array.push ( block, trees ) children
+
+
+
+-- VIEW
+
+
+main =
+    let
+        problem =
+            emptySudoku 4
+                |> hint 0 1
+                |> hint 6 4
+                |> hint 15 1
+    in
+    viewSudoku 4 problem
+        |> Html.toUnstyled
+
+
+viewSudoku : Int -> Problem -> Html msg
+viewSudoku m ((Problem { states }) as problem) =
+    states
+        |> Array.indexedMap (viewCell m problem)
+        |> Array.toList
+        |> Html.div
+            [ Attribute.css
+                [ grid
+                , gridTemplateColumns <| List.repeat m "100px"
+                , gridAutoRows "100px"
+                ]
+            ]
+
+
+grid : Style
+grid =
+    property "display" "grid"
+
+
+gridTemplateColumns : List String -> Style
+gridTemplateColumns dimensions =
+    property "grid-template-columns" <| String.join " " dimensions
+
+
+gridAutoRows : String -> Style
+gridAutoRows size =
+    property "grid-auto-rows" size
+
+
+viewCell : Int -> Problem -> Int -> State -> Html msg
+viewCell m problem index cell =
+    let
+        content =
+            case cell of
+                Determined v ->
+                    String.fromInt v
+
+                Candidates _ ->
+                    ""
+    in
+    Html.div
+        [ Attribute.css
+            [ borderColor (rgb 192 192 192)
+            , borderWidth <| px 1
+            , borderStyle solid
+            , displayFlex
+            , justifyContent center
+            , alignItems center
+            ]
+        ]
+        [ Html.text content ]
