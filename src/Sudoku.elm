@@ -2,9 +2,11 @@ module Sudoku exposing (Problem, Strategy, Suggestion, emptySudoku, execute, hin
 
 import Array exposing (Array)
 import Array.Util as Util exposing (member)
+import Browser
 import Css exposing (..)
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
+import Html.Styled.Events as Event
 import Set exposing (Set)
 import Set.Util exposing (pick)
 import Stream exposing (Stream)
@@ -117,8 +119,8 @@ apply consequence states =
 
         RemoveCandidateAt cell d ->
             let
-                update : State -> State
-                update state =
+                updateState : State -> State
+                updateState state =
                     case state of
                         Determined v ->
                             Determined v
@@ -131,7 +133,7 @@ apply consequence states =
                 updatedState =
                     states
                         |> Array.get cell
-                        |> Maybe.map update
+                        |> Maybe.map updateState
             in
             updatedState
                 |> Maybe.map (\s -> Array.set cell s states)
@@ -374,21 +376,78 @@ addBlockToRoot (Problem { states }) tree block =
 -- VIEW
 
 
+type Model
+    = Model
+        { m : Int
+        , problem : Problem
+        }
+
+
 main =
+    Browser.sandbox
+        { init = init
+        , update = update
+        , view = view >> Html.toUnstyled
+        }
+
+
+init : Model
+init =
     let
+        m =
+            4
+
         problem =
-            emptySudoku 4
+            emptySudoku m
                 |> hint 0 1
                 |> hint 6 4
-                |> hint 15 1
+                |> hint 9 2
+                |> hint 15 4
     in
-    viewSudoku 4 problem
-        |> Html.toUnstyled
+    Model { m = m, problem = problem }
 
 
-viewSudoku : Int -> Problem -> Html msg
-viewSudoku m ((Problem { states }) as problem) =
-    states
+type Msg
+    = Advance
+
+
+update : Msg -> Model -> Model
+update msg ((Model ({ problem } as data)) as model) =
+    let
+        toModel p =
+            Model { data | problem = p }
+    in
+    case msg of
+        Advance ->
+            problem
+                |> solve
+                |> Maybe.map (flip execute problem)
+                |> Maybe.map toModel
+                |> Maybe.withDefault model
+
+
+flip : (a -> b -> c) -> (b -> a -> c)
+flip f b a =
+    f a b
+
+
+view : Model -> Html Msg
+view ((Model { problem }) as model) =
+    Html.div []
+        [ Html.button [ Event.onClick Advance, Attribute.disabled <| isSolved problem ] [ Html.text "↻" ]
+        , viewSudoku model
+        ]
+
+
+viewSudoku : Model -> Html msg
+viewSudoku (Model { m, problem }) =
+    let
+        sts =
+            case problem of
+                Problem { states } ->
+                    states
+    in
+    sts
         |> Array.indexedMap (viewCell m problem)
         |> Array.toList
         |> Html.div
@@ -423,8 +482,20 @@ viewCell m problem index cell =
                 Determined v ->
                     String.fromInt v
 
+                Candidates cs ->
+                    cs
+                        |> Set.toList
+                        |> List.map String.fromInt
+                        |> List.sort
+                        |> String.join ","
+
+        color =
+            case cell of
+                Determined _ ->
+                    rgb 0 0 0
+
                 Candidates _ ->
-                    ""
+                    rgb 200 200 200
     in
     Html.div
         [ Attribute.css
@@ -434,6 +505,7 @@ viewCell m problem index cell =
             , displayFlex
             , justifyContent center
             , alignItems center
+            , Css.color color
             ]
         ]
         [ Html.text content ]
