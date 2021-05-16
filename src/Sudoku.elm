@@ -1,4 +1,4 @@
-module Sudoku exposing (Problem, Strategy, Suggestion, emptySudoku, execute, clue, isSolved, shouldBe, solve)
+module Sudoku exposing (Fuel(..), Problem, Strategy, Suggestion, clue, emptySudoku, execute, isSolved, shouldBe, solve, solveWithFuel)
 
 import Array exposing (Array)
 import Array.Util as Util exposing (member)
@@ -158,11 +158,34 @@ actOn cell (ShouldBe d) =
     Fill cell d
 
 
+type Fuel
+    = Finite Int
+    | Infinite
+
+
+consume : Fuel -> Maybe Fuel
+consume fuel =
+    case fuel of
+        Finite 0 ->
+            Nothing
+
+        Finite n ->
+            Just <| Finite <| n - 1
+
+        Infinite ->
+            Just <| Infinite
+
+
 solve : Strategy
-solve ((Problem { states }) as problem) =
+solve =
+    solveWithFuel Infinite
+
+
+solveWithFuel : Fuel -> Strategy
+solveWithFuel fuel ((Problem { states }) as problem) =
     states
         |> toTreeStream
-        |> firstSuggestion problem
+        |> firstSuggestionWith fuel problem
 
 
 type Tree
@@ -247,15 +270,21 @@ uncurry f ( a, b ) =
     f a b
 
 
-firstSuggestion : Problem -> Stream Tree -> Maybe Action
-firstSuggestion problem stream =
+firstSuggestionWith : Fuel -> Problem -> Stream Tree -> Maybe Action
+firstSuggestionWith fuel problem stream =
+    let
+        consumedFuelSuggestion candidate =
+            fuel
+                |> consume
+                |> Maybe.andThen (\remainingFuel -> suggestionFromTree remainingFuel problem candidate)
+    in
     stream
         |> Stream.head
-        |> Maybe.andThen (suggestionFromTree problem)
+        |> Maybe.andThen consumedFuelSuggestion
 
 
-suggestionFromTree : Problem -> ( Tree, Stream Tree ) -> Maybe Action
-suggestionFromTree problem ( tree, stream ) =
+suggestionFromTree : Fuel -> Problem -> ( Tree, Stream Tree ) -> Maybe Action
+suggestionFromTree fuel problem ( tree, stream ) =
     let
         domain =
             effectiveCandidates tree
@@ -269,7 +298,7 @@ suggestionFromTree problem ( tree, stream ) =
     else
         stream
             |> Stream.afterwards (\_ -> sprout problem tree)
-            |> firstSuggestion problem
+            |> firstSuggestionWith fuel problem
 
 
 sprout : Problem -> Tree -> Stream Tree
