@@ -276,10 +276,10 @@ sprout ((Problem { blocks }) as problem) tree =
                 |> List.map (addBlockToRoot problem tree)
                 |> List.foldl Stream.afterwards Stream.empty
 
-        Node cell _ children ->
+        Node cell domain ancestors ->
             let
                 usedBlocks =
-                    children
+                    ancestors
                         |> Array.map Tuple.first
 
                 rootStream =
@@ -288,8 +288,44 @@ sprout ((Problem { blocks }) as problem) tree =
                         |> List.filter (\b -> not <| member b usedBlocks)
                         |> List.map (addBlockToRoot problem tree)
                         |> List.foldl Stream.afterwards Stream.empty
+
+                ancestorStream : () -> Stream Tree
+                ancestorStream =
+                    \_ ->
+                        ancestors
+                            |> Array.indexedMap (blocksStream ancestors)
+                            |> Array.foldl Stream.afterwards Stream.empty
+                            |> Stream.map (Node cell domain)
+
+                blocksStream : Array ( Block, Array Tree ) -> Int -> ( Block, Array Tree ) -> () -> Stream (Array ( Block, Array Tree ))
+                blocksStream originalAncestors blockIndex block =
+                    let
+                        updateAncestor b =
+                            Array.set blockIndex b originalAncestors
+                    in
+                    \_ ->
+                        blockStream block
+                            |> Stream.map updateAncestor
+
+                blockStream : ( Block, Array Tree ) -> Stream ( Block, Array Tree )
+                blockStream ( block, children ) =
+                    children
+                        |> Array.indexedMap (childrenStream children)
+                        |> Array.foldl Stream.afterwards Stream.empty
+                        |> Stream.map (Tuple.pair block)
+
+                childrenStream : Array Tree -> Int -> Tree -> () -> Stream (Array Tree)
+                childrenStream originalChildren childIndex child =
+                    let
+                        updateChild c =
+                            Array.set childIndex c originalChildren
+                    in
+                    \_ ->
+                        sprout problem child
+                            |> Stream.map updateChild
             in
             rootStream
+                |> Stream.afterwards ancestorStream
 
 
 addBlockToRoot : Problem -> Tree -> Block -> () -> Stream Tree
