@@ -1,7 +1,7 @@
 module SolverTest exposing (..)
 
 import Expect
-import Sudoku exposing (Problem, hint)
+import Sudoku exposing (Problem, clue)
 import Test exposing (..)
 
 
@@ -12,30 +12,30 @@ suite =
             [ let
                 problem =
                     Sudoku.emptySudoku 4
-                        |> hint 0 1
-                        |> hint 1 2
-                        |> hint 2 3
+                        |> clue 0 1
+                        |> clue 1 2
+                        |> clue 2 3
 
                 expected =
                     Sudoku.emptySudoku 4
-                        |> hint 0 1
-                        |> hint 1 2
-                        |> hint 2 3
-                        |> hint 3 4
+                        |> clue 0 1
+                        |> clue 1 2
+                        |> clue 2 3
+                        |> clue 3 4
                         |> Just
               in
               solveTest "forced" problem expected
             , let
                 problem =
                     Sudoku.emptySudoku 4
-                        |> hint 0 1
-                        |> hint 6 4
+                        |> clue 0 1
+                        |> clue 6 4
 
                 expected =
                     Sudoku.emptySudoku 4
-                        |> hint 0 1
-                        |> hint 6 4
-                        |> hint 1 4
+                        |> clue 0 1
+                        |> clue 6 4
+                        |> clue 1 4
                         |> Just
               in
               solveTest "baby sudoku with singleRemaining" problem expected

@@ -1,4 +1,4 @@
-module Sudoku exposing (Problem, Strategy, Suggestion, emptySudoku, execute, hint, isSolved, shouldBe, solve)
+module Sudoku exposing (Problem, Strategy, Suggestion, emptySudoku, execute, clue, isSolved, shouldBe, solve)
 
 import Array exposing (Array)
 import Array.Util as Util exposing (member)
@@ -78,8 +78,8 @@ emptySudoku m =
     Problem { states = states, blocks = Blocks.sudokuBlocks m }
 
 
-hint : Cell -> Domain -> Problem -> Problem
-hint cell d =
+clue : Cell -> Domain -> Problem -> Problem
+clue cell d =
     execute (Fill cell d)
 
 
@@ -399,10 +399,10 @@ init =
 
         problem =
             emptySudoku m
-                |> hint 0 1
-                |> hint 6 4
-                |> hint 9 2
-                |> hint 15 4
+                |> clue 0 1
+                |> clue 6 4
+                |> clue 9 2
+                |> clue 15 4
     in
     Model { m = m, problem = problem }
 
