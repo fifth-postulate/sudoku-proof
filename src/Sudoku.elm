@@ -162,7 +162,7 @@ solve ((Problem { states }) as problem) =
 
 type Tree
     = Leaf Cell (Set Domain)
-    | Node Cell (Set Domain) (Array ( Block, List Tree ))
+    | Node Cell (Set Domain) (Array ( Block, Array Tree ))
 
 
 rootCell : Tree -> Cell
@@ -185,7 +185,7 @@ rootDomain tree =
             domain
 
 
-rootChildren : Tree -> Array ( Block, List Tree )
+rootChildren : Tree -> Array ( Block, Array Tree )
 rootChildren tree =
     case tree of
         Leaf _ _ ->
@@ -206,7 +206,7 @@ effectiveCandidates tree =
                 exclude =
                     children
                         |> Array.toList
-                        |> List.concatMap Tuple.second
+                        |> List.concatMap (Tuple.second >> Array.toList)
                         |> List.map effectiveCandidates
                         |> List.foldl Set.union Set.empty
             in
@@ -310,6 +310,7 @@ addBlockToRoot (Problem { states }) tree block =
                 |> Set.filter hasCandidates
                 |> Set.toList
                 |> List.map toLeaf
+                |> Array.fromList
 
         hasCandidates candidate =
             states
