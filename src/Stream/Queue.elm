@@ -1,4 +1,4 @@
-module Stream.Queue exposing (Queue, append, empty, fromList, popBack, popFront, pushBack, pushFront, toList)
+module Stream.Queue exposing (Queue, append, empty, fromList, map, popBack, popFront, pushBack, pushFront, toList)
 
 
 type Queue a
@@ -73,4 +73,12 @@ append (Queue left) (Queue right) =
     Queue
         { front = List.concat [ left.front, List.reverse left.back ]
         , back = List.concat [ List.reverse right.front, right.back ]
+        }
+
+
+map : (a -> b) -> Queue a -> Queue b
+map f (Queue queue) =
+    Queue
+        { front = List.map f queue.front
+        , back = List.map f queue.back
         }

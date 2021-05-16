@@ -1,4 +1,4 @@
-module Stream exposing (Stream, afterwards, empty, fromList, head, singleton)
+module Stream exposing (Stream, afterwards, empty, fromList, head, map, singleton)
 
 import Stream.Queue as Queue exposing (Queue)
 
@@ -48,3 +48,12 @@ afterwards promise (Stream stream) =
 append : Stream a -> Stream a -> Stream a
 append (Stream left) (Stream right) =
     Stream { values = List.append left.values right.values, promises = Queue.append left.promises right.promises }
+
+
+map : (a -> b) -> Stream a -> Stream b
+map f (Stream stream) =
+    let
+        lift promise =
+            map f << promise
+    in
+    Stream { values = List.map f stream.values, promises = Queue.map lift stream.promises }
