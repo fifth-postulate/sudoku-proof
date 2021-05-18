@@ -1,12 +1,10 @@
-module Sudoku exposing (Fuel(..), Info, Msg(..), Problem, Strategy, Suggestion, clue, emptySudoku, execute, isSolved, shouldBe, solve, solveWithFuel, update, view)
+module Sudoku exposing (Action, Fuel(..), Info, Msg(..), Problem, Strategy, Suggestion, clue, emptySudoku, execute, isSolved, shouldBe, solve, solveWithFuel, update, view, viewAction)
 
 import Array exposing (Array)
 import Array.Util as Util exposing (member)
-import Browser
 import Css exposing (..)
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
-import Html.Styled.Events as Event
 import Set exposing (Set)
 import Set.Util exposing (pick)
 import Stream exposing (Stream)
@@ -413,19 +411,17 @@ type Msg
     = Advance
 
 
-update : Msg -> Problem -> Problem
+update : Msg -> Problem -> ( Problem, Maybe Action )
 update msg problem =
+    let
+        action =
+            solve problem
+    in
     case msg of
         Advance ->
-            problem
-                |> solve
-                |> Maybe.map (flip execute problem)
-                |> Maybe.withDefault problem
-
-
-flip : (a -> b -> c) -> (b -> a -> c)
-flip f b a =
-    f a b
+            action
+                |> Maybe.map (\a -> ( execute a problem, Just a ))
+                |> Maybe.withDefault ( problem, Nothing )
 
 
 view : Info -> Problem -> Html msg
@@ -501,3 +497,12 @@ viewCell m problem index cell =
             ]
         ]
         [ Html.text content ]
+
+
+viewAction : Action -> Html msg
+viewAction (Fill cell domain) =
+    let
+        message =
+            String.join " " [ "write", String.fromInt domain, "in cell", String.fromInt cell ]
+    in
+    Html.span [] [ Html.text message ]
