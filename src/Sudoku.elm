@@ -1,4 +1,4 @@
-module Sudoku exposing (Fuel(..), Problem, Strategy, Suggestion, clue, emptySudoku, execute, isSolved, shouldBe, solve, solveWithFuel)
+module Sudoku exposing (Fuel(..), Info, Msg(..), Problem, Strategy, Suggestion, clue, emptySudoku, execute, isSolved, shouldBe, solve, solveWithFuel, update, view)
 
 import Array exposing (Array)
 import Array.Util as Util exposing (member)
@@ -409,46 +409,6 @@ type alias Info =
     { m : Int }
 
 
-main =
-    let
-        info =
-            { m = 9 }
-    in
-    Browser.sandbox
-        { init = init info
-        , update = update
-        , view = view info >> Html.toUnstyled
-        }
-
-
-init : Info -> Problem
-init info =
-    emptySudoku info.m
-        |> clue 2 9
-        |> clue 4 5
-        |> clue 9 5
-        |> clue 10 3
-        |> clue 13 8
-        |> clue 14 4
-        |> clue 16 2
-        |> clue 21 6
-        |> clue 26 4
-        |> clue 27 4
-        |> clue 29 6
-        |> clue 31 3
-        |> clue 37 1
-        |> clue 38 8
-        |> clue 44 9
-        |> clue 51 2
-        |> clue 61 5
-        |> clue 64 8
-        |> clue 69 7
-        |> clue 75 5
-        |> clue 76 6
-        |> clue 77 1
-        |> clue 78 9
-
-
 type Msg
     = Advance
 
@@ -468,16 +428,8 @@ flip f b a =
     f a b
 
 
-view : Info -> Problem -> Html Msg
-view info problem =
-    Html.div []
-        [ Html.button [ Event.onClick Advance, Attribute.disabled <| isSolved problem ] [ Html.text "↻" ]
-        , viewSudoku info problem
-        ]
-
-
-viewSudoku : Info -> Problem -> Html msg
-viewSudoku { m } ((Problem { states }) as problem) =
+view : Info -> Problem -> Html msg
+view { m } ((Problem { states }) as problem) =
     states
         |> Array.indexedMap (viewCell m problem)
         |> Array.toList
