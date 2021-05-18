@@ -12,6 +12,7 @@ pair ws v =
     zip (List.repeat (List.length ws) v) ws
 
 
+zip : List a -> List b -> List ( a, b )
 zip vs ws =
     case ( vs, ws ) of
         ( x :: xs, y :: ys ) ->

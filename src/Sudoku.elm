@@ -405,54 +405,62 @@ addBlockToRoot (Problem { states }) tree block =
 -- VIEW
 
 
-type Model
-    = Model
-        { m : Int
-        , problem : Problem
-        }
+type alias Info =
+    { m : Int }
 
 
 main =
+    let
+        info =
+            { m = 9 }
+    in
     Browser.sandbox
-        { init = init
+        { init = init info
         , update = update
-        , view = view >> Html.toUnstyled
+        , view = view info >> Html.toUnstyled
         }
 
 
-init : Model
-init =
-    let
-        m =
-            4
-
-        problem =
-            emptySudoku m
-                |> clue 0 1
-                |> clue 6 4
-                |> clue 9 2
-                |> clue 15 4
-    in
-    Model { m = m, problem = problem }
+init : Info -> Problem
+init info =
+    emptySudoku info.m
+        |> clue 2 9
+        |> clue 4 5
+        |> clue 9 5
+        |> clue 10 3
+        |> clue 13 8
+        |> clue 14 4
+        |> clue 16 2
+        |> clue 21 6
+        |> clue 26 4
+        |> clue 27 4
+        |> clue 29 6
+        |> clue 31 3
+        |> clue 37 1
+        |> clue 38 8
+        |> clue 44 9
+        |> clue 51 2
+        |> clue 61 5
+        |> clue 64 8
+        |> clue 69 7
+        |> clue 75 5
+        |> clue 76 6
+        |> clue 77 1
+        |> clue 78 9
 
 
 type Msg
     = Advance
 
 
-update : Msg -> Model -> Model
-update msg ((Model ({ problem } as data)) as model) =
-    let
-        toModel p =
-            Model { data | problem = p }
-    in
+update : Msg -> Problem -> Problem
+update msg problem =
     case msg of
         Advance ->
             problem
                 |> solve
                 |> Maybe.map (flip execute problem)
-                |> Maybe.map toModel
-                |> Maybe.withDefault model
+                |> Maybe.withDefault problem
 
 
 flip : (a -> b -> c) -> (b -> a -> c)
@@ -460,23 +468,17 @@ flip f b a =
     f a b
 
 
-view : Model -> Html Msg
-view ((Model { problem }) as model) =
+view : Info -> Problem -> Html Msg
+view info problem =
     Html.div []
         [ Html.button [ Event.onClick Advance, Attribute.disabled <| isSolved problem ] [ Html.text "↻" ]
-        , viewSudoku model
+        , viewSudoku info problem
         ]
 
 
-viewSudoku : Model -> Html msg
-viewSudoku (Model { m, problem }) =
-    let
-        sts =
-            case problem of
-                Problem { states } ->
-                    states
-    in
-    sts
+viewSudoku : Info -> Problem -> Html msg
+viewSudoku { m } ((Problem { states }) as problem) =
+    states
         |> Array.indexedMap (viewCell m problem)
         |> Array.toList
         |> Html.div
@@ -525,6 +527,14 @@ viewCell m problem index cell =
 
                 Candidates _ ->
                     rgb 200 200 200
+
+        size =
+            case cell of
+                Determined _ ->
+                    medium
+
+                Candidates _ ->
+                    xxSmall
     in
     Html.div
         [ Attribute.css
@@ -535,6 +545,7 @@ viewCell m problem index cell =
             , justifyContent center
             , alignItems center
             , Css.color color
+            , fontSize size
             ]
         ]
         [ Html.text content ]
