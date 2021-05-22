@@ -1,7 +1,7 @@
 module Sudoku exposing (Action, Fuel(..), Info, Msg(..), Problem, Strategy, Suggestion, clue, emptySudoku, execute, isSolved, shouldBe, solve, solveWithFuel, update, view, viewAction)
 
 import Array exposing (Array)
-import Array.Util as Util exposing (member)
+import Array.Util as Util
 import Css exposing (..)
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
@@ -221,6 +221,32 @@ rootChildren tree =
             children
 
 
+blocksIn : Tree -> List Block
+blocksIn tree =
+    case tree of
+        Leaf _ _ ->
+            []
+
+        Node _ _ children ->
+            let
+                siblingBlocks =
+                    children
+                        |> Array.map Tuple.first
+                        |> Array.foldl (::) []
+
+                descendantBlocks =
+                    children
+                        |> Array.map (Tuple.second >> flatten)
+                        |> Array.foldl List.append []
+
+                flatten trees =
+                    trees
+                        |> Array.map blocksIn
+                        |> Array.foldl List.append []
+            in
+            List.append siblingBlocks descendantBlocks
+
+
 effectiveCandidates : Tree -> Set Domain
 effectiveCandidates tree =
     case tree of
@@ -295,12 +321,12 @@ suggestionFromTree fuel problem ( tree, stream ) =
 
     else
         stream
-            |> Stream.afterwards (\_ -> sprout problem tree)
+            |> Stream.afterwards (\_ -> sprout problem tree <| blocksIn tree)
             |> firstSuggestionWith fuel problem
 
 
-sprout : Problem -> Tree -> Stream Tree
-sprout ((Problem { blocks }) as problem) tree =
+sprout : Problem -> Tree -> List Block -> Stream Tree
+sprout ((Problem { blocks }) as problem) tree forbiddenBlocks =
     case tree of
         Leaf cell _ ->
             blocks
@@ -310,14 +336,10 @@ sprout ((Problem { blocks }) as problem) tree =
 
         Node cell domain ancestors ->
             let
-                usedBlocks =
-                    ancestors
-                        |> Array.map Tuple.first
-
                 rootStream =
                     blocks
                         |> List.filter (Set.member cell)
-                        |> List.filter (\b -> not <| member b usedBlocks)
+                        |> List.filter (\b -> not <| List.member b forbiddenBlocks)
                         |> List.map (addBlockToRoot problem tree)
                         |> List.foldl Stream.afterwards Stream.empty
 
@@ -353,7 +375,7 @@ sprout ((Problem { blocks }) as problem) tree =
                             Array.set childIndex c originalChildren
                     in
                     \_ ->
-                        sprout problem child
+                        sprout problem child forbiddenBlocks
                             |> Stream.map updateChild
             in
             rootStream
