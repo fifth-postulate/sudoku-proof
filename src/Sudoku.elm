@@ -94,8 +94,8 @@ execute (Fill cell d) (Problem problem) =
                 |> List.foldl Set.union Set.empty
                 |> Set.remove cell
                 |> Set.toList
-                |> List.map (\c -> RemoveCandidateAt c d)
-                |> (::) (Determine cell d)
+                |> List.map (RemoveCandidateAt d)
+                |> (::) (Determine d cell)
 
         states =
             List.foldl apply problem.states consequences
@@ -104,18 +104,18 @@ execute (Fill cell d) (Problem problem) =
 
 
 type Consequence
-    = Determine Cell Domain
-    | RemoveCandidateAt Cell Domain
+    = Determine Domain Cell
+    | RemoveCandidateAt Domain Cell
 
 
 apply : Consequence -> Array State -> Array State
 apply consequence states =
     case consequence of
-        Determine cell d ->
+        Determine d cell ->
             states
                 |> Array.set cell (Determined d)
 
-        RemoveCandidateAt cell d ->
+        RemoveCandidateAt d cell ->
             let
                 updateState : State -> State
                 updateState state =
