@@ -58,8 +58,8 @@ suite =
                     let
                         actual =
                             Stream.zip naturalNumbers naturalNumbers
-                            |> Stream.head
-                            |> Maybe.map Tuple.first
+                                |> Stream.head
+                                |> Maybe.map Tuple.first
                     in
                     Expect.equal (Just ( 0, 0 )) actual
             , test "head of head zip of two infinite list" <|
@@ -67,13 +67,34 @@ suite =
                     let
                         actual =
                             Stream.zip naturalNumbers naturalNumbers
-                            |> Stream.head
-                            |> Maybe.map Tuple.second
-                            |> Maybe.andThen Stream.head
-                            |> Maybe.map Tuple.first
+                                |> Stream.head
+                                |> Maybe.map Tuple.second
+                                |> Maybe.andThen Stream.head
+                                |> Maybe.map Tuple.first
                     in
                     Expect.equal (Just ( 1, 1 )) actual
-
+            ]
+        , describe "zipList" <|
+            [ test "head of zipList of few infinite list" <|
+                \_ ->
+                    let
+                        actual =
+                            Stream.zipList [ naturalNumbers, Stream.map ((*) 2) naturalNumbers, Stream.map ((*) 3) naturalNumbers ]
+                                |> Stream.head
+                                |> Maybe.map Tuple.first
+                    in
+                    Expect.equal (Just [ 0, 0, 0 ]) actual
+            , test "head of head zip of few infinite list" <|
+                \_ ->
+                    let
+                        actual =
+                            Stream.zipList [ naturalNumbers, Stream.map ((*) 2) naturalNumbers, Stream.map ((*) 3) naturalNumbers ]
+                                |> Stream.head
+                                |> Maybe.map Tuple.second
+                                |> Maybe.andThen Stream.head
+                                |> Maybe.map Tuple.first
+                    in
+                    Expect.equal (Just [ 1, 2, 3 ]) actual
             ]
         ]
 

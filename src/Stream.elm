@@ -1,4 +1,4 @@
-module Stream exposing (Stream, afterwards, constant, empty, fromList, head, map, singleton, zip)
+module Stream exposing (Stream, afterwards, constant, empty, fromList, head, map, singleton, zip, zipList)
 
 import Stream.Queue as Queue exposing (Queue)
 
@@ -65,14 +65,6 @@ map f (Stream stream) =
     Stream { values = List.map f stream.values, promises = Queue.map lift stream.promises }
 
 
-
--- zip : List (Stream a) -> Stream (List a)
--- zip streams =
---     case streams of
---         [] ->
---             conk
-
-
 zip : Stream a -> Stream b -> Stream ( a, b )
 zip xs ys =
     let
@@ -89,3 +81,16 @@ zip xs ys =
         |> head
         |> Maybe.andThen couple
         |> Maybe.withDefault empty
+
+
+zipList : List (Stream a) -> Stream (List a)
+zipList streams =
+    case streams of
+        [] ->
+            constant []
+
+        h :: hs ->
+            hs
+                |> zipList
+                |> zip h
+                |> map (\( x, xs ) -> x :: xs)
