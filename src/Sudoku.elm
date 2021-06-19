@@ -3,6 +3,7 @@ module Sudoku exposing (Action, Fuel(..), Info, Msg(..), Problem, Strategy, Sugg
 import Array exposing (Array)
 import Array.Util as Util
 import Css exposing (..)
+import Dict exposing (Dict)
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Set exposing (Set)
@@ -142,20 +143,6 @@ type alias Strategy =
     Problem -> Maybe Action
 
 
-type Suggestion
-    = ShouldBe Domain
-
-
-shouldBe : Domain -> Suggestion
-shouldBe =
-    ShouldBe
-
-
-actOn : Cell -> Suggestion -> Action
-actOn cell (ShouldBe d) =
-    Fill cell d
-
-
 type Fuel
     = Finite Int
     | Infinite
@@ -180,245 +167,212 @@ solve =
 
 
 solveWithFuel : Fuel -> Strategy
-solveWithFuel fuel ((Problem { states }) as problem) =
-    states
-        |> toTreeStream
-        |> firstSuggestionWith fuel problem
+solveWithFuel fuel problem =
+    firstSuggestionFromStream fuel (Stream.singleton Seed) problem
 
 
 type Tree
-    = Leaf Cell (Set Domain)
-    | Node Cell (Set Domain) (Array ( Block, Array Tree ))
+    = Node Cell (Dict Domain Tree)
+    | Seed
 
 
-rootCell : Tree -> Cell
-rootCell tree =
-    case tree of
-        Leaf cell _ ->
-            cell
-
-        Node cell _ _ ->
-            cell
-
-
-rootDomain : Tree -> Set Domain
-rootDomain tree =
-    case tree of
-        Leaf _ domain ->
-            domain
-
-        Node _ domain _ ->
-            domain
-
-
-rootChildren : Tree -> Array ( Block, Array Tree )
-rootChildren tree =
-    case tree of
-        Leaf _ _ ->
-            Array.empty
-
-        Node _ _ children ->
-            children
-
-
-blocksIn : Tree -> List Block
-blocksIn tree =
-    case tree of
-        Leaf _ _ ->
-            []
-
-        Node _ _ children ->
-            let
-                siblingBlocks =
-                    children
-                        |> Array.map Tuple.first
-                        |> Array.foldl (::) []
-
-                descendantBlocks =
-                    children
-                        |> Array.map (Tuple.second >> flatten)
-                        |> Array.foldl List.append []
-
-                flatten trees =
-                    trees
-                        |> Array.map blocksIn
-                        |> Array.foldl List.append []
-            in
-            List.append siblingBlocks descendantBlocks
-
-
-effectiveCandidates : Tree -> Set Domain
-effectiveCandidates tree =
-    case tree of
-        Leaf _ domain ->
-            domain
-
-        Node _ domain children ->
-            let
-                exclude =
-                    children
-                        |> Array.toList
-                        |> List.concatMap (Tuple.second >> Array.toList)
-                        |> List.map effectiveCandidates
-                        |> List.foldl Set.union Set.empty
-            in
-            Set.diff domain exclude
-
-
-toTreeStream : Array State -> Stream Tree
-toTreeStream cells =
+root : Cell -> Set Domain -> Tree
+root cell cs =
     let
-        order ( leftCell, leftState ) ( rightCell, rightState ) =
-            case compare (size leftState) (size rightState) of
-                EQ ->
-                    compare leftCell rightCell
-
-                _ as o ->
-                    o
-
-        size state =
-            Set.size <| candidates <| state
+        options =
+            cs
+                |> Set.toList
+                |> List.map (\d -> ( d, Seed ))
+                |> Dict.fromList
     in
-    cells
-        |> Array.indexedMap Tuple.pair
-        |> Array.filter (Tuple.second >> isDetermined >> not)
-        |> Array.toList
-        |> List.sortWith order
-        |> List.map (Tuple.mapSecond candidates)
-        |> List.map (uncurry Leaf)
-        |> Stream.fromList
+    Node cell options
 
 
-uncurry : (a -> b -> c) -> ( a, b ) -> c
-uncurry f ( a, b ) =
-    f a b
-
-
-firstSuggestionWith : Fuel -> Problem -> Stream Tree -> Maybe Action
-firstSuggestionWith fuel problem stream =
-    let
-        consumedFuelSuggestion candidate =
-            fuel
-                |> consume
-                |> Maybe.andThen (\remainingFuel -> suggestionFromTree remainingFuel problem candidate)
-    in
+firstSuggestionFromStream : Fuel -> Stream Tree -> Strategy
+firstSuggestionFromStream fuel stream problem =
     stream
         |> Stream.head
-        |> Maybe.andThen consumedFuelSuggestion
+        |> Maybe.andThen (firstSuggestionFromTree fuel problem)
 
 
-suggestionFromTree : Fuel -> Problem -> ( Tree, Stream Tree ) -> Maybe Action
-suggestionFromTree fuel problem ( tree, stream ) =
-    let
-        domain =
-            effectiveCandidates tree
-    in
-    if Set.size domain == 1 then
-        domain
-            |> pick
-            |> Maybe.map shouldBe
-            |> Maybe.map (actOn <| rootCell tree)
+firstSuggestionFromTree : Fuel -> Problem -> ( Tree, Stream Tree ) -> Maybe Action
+firstSuggestionFromTree fuel problem ( tree, stream ) =
+    case verdict problem tree of
+        Solvable action ->
+            Just action
 
-    else
-        stream
-            |> Stream.afterwards (\_ -> sprout problem tree <| blocksIn tree)
-            |> firstSuggestionWith fuel problem
-
-
-sprout : Problem -> Tree -> List Block -> Stream Tree
-sprout ((Problem { blocks }) as problem) tree forbiddenBlocks =
-    case tree of
-        Leaf cell _ ->
-            blocks
-                |> List.filter (Set.member cell)
-                |> List.map (addBlockToRoot problem tree)
-                |> List.foldl Stream.afterwards Stream.empty
-
-        Node cell domain ancestors ->
+        Indeterminate ->
             let
-                rootStream =
-                    blocks
-                        |> List.filter (Set.member cell)
-                        |> List.filter (\b -> not <| List.member b forbiddenBlocks)
-                        |> List.map (addBlockToRoot problem tree)
-                        |> List.foldl Stream.afterwards Stream.empty
-
-                ancestorStream : () -> Stream Tree
-                ancestorStream =
-                    \_ ->
-                        ancestors
-                            |> Array.indexedMap (blocksStream ancestors)
-                            |> Array.foldl Stream.afterwards Stream.empty
-                            |> Stream.map (Node cell domain)
-
-                blocksStream : Array ( Block, Array Tree ) -> Int -> ( Block, Array Tree ) -> () -> Stream (Array ( Block, Array Tree ))
-                blocksStream originalAncestors blockIndex block =
-                    let
-                        updateAncestor b =
-                            Array.set blockIndex b originalAncestors
-                    in
-                    \_ ->
-                        blockStream block
-                            |> Stream.map updateAncestor
-
-                blockStream : ( Block, Array Tree ) -> Stream ( Block, Array Tree )
-                blockStream ( block, children ) =
-                    children
-                        |> Array.indexedMap (childrenStream children)
-                        |> Array.foldl Stream.afterwards Stream.empty
-                        |> Stream.map (Tuple.pair block)
-
-                childrenStream : Array Tree -> Int -> Tree -> () -> Stream (Array Tree)
-                childrenStream originalChildren childIndex child =
-                    let
-                        updateChild c =
-                            Array.set childIndex c originalChildren
-                    in
-                    \_ ->
-                        sprout problem child forbiddenBlocks
-                            |> Stream.map updateChild
+                augmentedStream =
+                    stream
+                        |> Stream.afterwards (\_ -> grow problem tree)
             in
-            rootStream
-                |> Stream.afterwards ancestorStream
+            consume fuel
+                |> Maybe.andThen
+                    (\f -> firstSuggestionFromStream f augmentedStream problem)
+
+        Unsolvable _ ->
+            consume fuel
+                |> Maybe.andThen
+                    (\f -> firstSuggestionFromStream f stream problem)
 
 
-addBlockToRoot : Problem -> Tree -> Block -> () -> Stream Tree
-addBlockToRoot (Problem { states }) tree block =
-    let
-        cell =
-            rootCell tree
+type Verdict
+    = Solvable Action
+    | Indeterminate
+    | Unsolvable Reason
 
-        domain =
-            rootDomain tree
 
-        children =
-            rootChildren tree
+type Reason
+    = UnderConstrained
+    | OverConstrained
+    | LogicError String
 
-        trees =
-            block
-                |> Set.remove cell
-                |> Set.filter hasCandidates
-                |> Set.toList
-                |> List.map toLeaf
-                |> Array.fromList
 
-        hasCandidates candidate =
-            states
-                |> Array.get candidate
-                |> Maybe.map (not << isDetermined)
-                |> Maybe.withDefault False
+verdict : Problem -> Tree -> Verdict
+verdict ((Problem { states }) as problem) tree =
+    case tree of
+        Seed ->
+            Indeterminate
 
-        toLeaf c =
+        Node cell choices ->
             let
-                d =
+                options : Set Domain
+                options =
                     states
-                        |> Array.get c
+                        |> Array.get cell
                         |> Maybe.map candidates
                         |> Maybe.withDefault Set.empty
             in
-            Leaf c d
-    in
-    \_ -> Stream.singleton <| Node cell domain <| Array.push ( block, trees ) children
+            case Set.size options of
+                0 ->
+                    Unsolvable OverConstrained
+
+                1 ->
+                    pick options
+                        |> Maybe.map shouldBe
+                        |> Maybe.map (actOn cell)
+                        |> Maybe.map Solvable
+                        |> Maybe.withDefault (Unsolvable <| LogicError "pick of options will succeed because it has a size of 1")
+
+                _ ->
+                    let
+                        verdicts =
+                            choices
+                                |> Dict.toList
+                                |> List.map (\( d, t ) -> ( d, verdict (execute (Fill cell d) problem) t ))
+
+                        isSolvable v =
+                            case v of
+                                Solvable _ ->
+                                    True
+
+                                _ ->
+                                    False
+
+                        isUnsolvable v =
+                            case v of
+                                Unsolvable _ ->
+                                    True
+
+                                _ ->
+                                    False
+
+                        solvables =
+                            verdicts
+                                |> List.filter (Tuple.second >> isSolvable)
+
+                        unsolvables =
+                            verdicts
+                                |> List.filter (Tuple.second >> isUnsolvable)
+                    in
+                    if List.length solvables >= 2 then
+                        Unsolvable UnderConstrained
+
+                    else if List.length solvables == 1 then
+                        solvables
+                            |> List.head
+                            |> Maybe.map (\( d, _ ) -> Solvable <| Fill cell d)
+                            |> Maybe.withDefault (Unsolvable <| LogicError "solvable should have a head because it has a lenght of 1")
+
+                    else if List.length unsolvables == Dict.size choices - 1 then
+                        let
+                            badChoices =
+                                unsolvables
+                                    |> List.map Tuple.first
+                        in
+                        verdicts
+                            |> List.filter (\( d, _ ) -> not <| List.member d badChoices)
+                            |> List.head
+                            |> Maybe.map (\( d, _ ) -> Solvable <| Fill cell d)
+                            |> Maybe.withDefault (Unsolvable <| LogicError "verdicts should leave a head after filter because it has a one less bad choice then total choices")
+
+                    else
+                        Indeterminate
+
+
+type Suggestion
+    = ShouldBe Domain
+
+
+shouldBe : Domain -> Suggestion
+shouldBe =
+    ShouldBe
+
+
+actOn : Cell -> Suggestion -> Action
+actOn cell (ShouldBe d) =
+    Fill cell d
+
+
+grow : Problem -> Tree -> Stream Tree
+grow ((Problem { states }) as problem) tree =
+    case tree of
+        Seed ->
+            states
+                |> Array.toIndexedList
+                |> List.filter (\( _, state ) -> not <| isDetermined state)
+                |> List.map (Tuple.mapSecond candidates)
+                |> List.sortWith candidateSizeIndex
+                |> List.map (\( c, ds ) -> root c ds)
+                |> Stream.fromList
+
+        Node cell choices ->
+            let
+                streamAfterChoice : ( Domain, Tree ) -> Stream ( Domain, Tree )
+                streamAfterChoice ( d, t ) =
+                    let
+                        action =
+                            actOn cell (shouldBe d)
+
+                        futureProblem =
+                            execute action problem
+                    in
+                    case verdict futureProblem t of
+                        Indeterminate ->
+                            Stream.eventually (\_ -> grow futureProblem t)
+                                |> Stream.map (Tuple.pair d)
+
+                        _ ->
+                            Stream.constant t
+                                |> Stream.map (Tuple.pair d)
+            in
+            choices
+                |> Dict.toList
+                |> List.map streamAfterChoice
+                |> Stream.zipList
+                |> Stream.map Dict.fromList
+                |> Stream.map (Node cell)
+
+
+candidateSizeIndex : ( Int, Set Domain ) -> ( Int, Set Domain ) -> Order
+candidateSizeIndex ( leftCell, leftCandidates ) ( rightCell, rightCandidates ) =
+    case compare (Set.size leftCandidates) (Set.size rightCandidates) of
+        EQ ->
+            compare leftCell rightCell
+
+        _ as order ->
+            order
 
 
 
