@@ -1,4 +1,4 @@
-module Stream exposing (Stream, afterwards, constant, empty, fromList, head, map, singleton, zip, zipList)
+module Stream exposing (Stream, afterwards, constant, empty, eventually, fromList, head, map, singleton, zip, zipList)
 
 import Stream.Queue as Queue exposing (Queue)
 
@@ -15,6 +15,12 @@ empty =
 singleton : a -> Stream a
 singleton value =
     Stream { values = [ value ], promises = Queue.empty }
+
+
+eventually : (() -> Stream a) -> Stream a
+eventually promise =
+    empty
+        |> afterwards promise
 
 
 constant : a -> Stream a
