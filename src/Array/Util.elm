@@ -1,4 +1,4 @@
-module Array.Util exposing (all, indexedFoldl, member)
+module Array.Util exposing (all, any, indexedFoldl, member)
 
 import Array exposing (Array)
 
@@ -8,6 +8,13 @@ all transform array =
     array
         |> Array.map transform
         |> Array.foldl (&&) True
+
+
+any : (a -> Bool) -> Array a -> Bool
+any transform array =
+    array
+        |> Array.map transform
+        |> Array.foldl (||) False
 
 
 indexedFoldl : (( Int, a ) -> b -> b) -> b -> Array a -> b

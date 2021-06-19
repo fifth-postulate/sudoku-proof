@@ -20,6 +20,14 @@ suite =
                     \subject ->
                         Expect.true "isPositive" (Util.all (\n -> n > 0) subject)
                 ]
+            , describe "any"
+                [ fuzz (array <| constant True) "of identity with an non empty array of True values is True" <|
+                    \subject ->
+                        Expect.true "identity" <| (Array.length subject == 0) || (Util.any identity <| subject)
+                , fuzz (array <| intRange 1 Random.maxInt) "of isPositive with array of positive integers is True" <|
+                    \subject ->
+                        Expect.true "isPositive" <| (Array.length subject == 0) || (Util.any (\n -> n > 0) subject)
+                ]
             , describe "indexedFoldl"
                 [ fuzz (array <| constant 1) "of sum works correctly" <|
                     \subject ->
