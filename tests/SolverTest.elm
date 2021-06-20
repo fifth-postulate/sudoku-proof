@@ -35,7 +35,7 @@ suite =
                     Sudoku.emptySudoku 4
                         |> clue 0 1
                         |> clue 6 4
-                        |> clue 8 4
+                        |> clue 9 4
                         |> Just
               in
               solveTest "baby sudoku with singleRemaining" problem expected

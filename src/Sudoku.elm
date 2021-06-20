@@ -199,7 +199,7 @@ firstSuggestionFromTree : Fuel -> Problem -> ( Tree, Stream Tree ) -> Maybe Acti
 firstSuggestionFromTree fuel problem ( tree, stream ) =
     case verdict problem tree of
         Solvable action ->
-            Just action
+            List.head action
 
         Indeterminate ->
             let
@@ -218,7 +218,7 @@ firstSuggestionFromTree fuel problem ( tree, stream ) =
 
 
 type Verdict
-    = Solvable Action
+    = Solvable (List Action)
     | Indeterminate
     | Unsolvable Reason
 
@@ -231,84 +231,98 @@ type Reason
 
 verdict : Problem -> Tree -> Verdict
 verdict ((Problem { states }) as problem) tree =
-    case tree of
-        Seed ->
-            Indeterminate
+    let
+        anyStateWithNoCandidates =
+            Util.any (\c -> (not <| isDetermined c) && (Set.isEmpty <| candidates c)) states
+    in
+    if anyStateWithNoCandidates then
+        Unsolvable OverConstrained
 
-        Node cell choices ->
-            let
-                options : Set Domain
-                options =
-                    states
-                        |> Array.get cell
-                        |> Maybe.map candidates
-                        |> Maybe.withDefault Set.empty
-            in
-            case Set.size options of
-                0 ->
-                    Unsolvable OverConstrained
+    else
+        case tree of
+            Seed ->
+                if isSolved problem then
+                    Solvable []
 
-                1 ->
-                    pick options
-                        |> Maybe.map shouldBe
-                        |> Maybe.map (actOn cell)
-                        |> Maybe.map Solvable
-                        |> Maybe.withDefault (Unsolvable <| LogicError "pick of options will succeed because it has a size of 1")
+                else
+                    Indeterminate
 
-                _ ->
-                    let
-                        verdicts =
-                            choices
-                                |> Dict.toList
-                                |> List.map (\( d, t ) -> ( d, verdict (execute (Fill cell d) problem) t ))
+            Node cell choices ->
+                let
+                    options : Set Domain
+                    options =
+                        states
+                            |> Array.get cell
+                            |> Maybe.map candidates
+                            |> Maybe.withDefault Set.empty
+                in
+                case Set.size options of
+                    0 ->
+                        Unsolvable <| LogicError "a state with 0 options should be caught earlier"
 
-                        isSolvable v =
-                            case v of
-                                Solvable _ ->
-                                    True
-
-                                _ ->
-                                    False
-
-                        isUnsolvable v =
-                            case v of
-                                Unsolvable _ ->
-                                    True
-
-                                _ ->
-                                    False
-
-                        solvables =
-                            verdicts
-                                |> List.filter (Tuple.second >> isSolvable)
-
-                        unsolvables =
-                            verdicts
-                                |> List.filter (Tuple.second >> isUnsolvable)
-                    in
-                    if List.length solvables >= 2 then
-                        Unsolvable UnderConstrained
-
-                    else if List.length solvables == 1 then
-                        solvables
-                            |> List.head
-                            |> Maybe.map (\( d, _ ) -> Solvable <| Fill cell d)
-                            |> Maybe.withDefault (Unsolvable <| LogicError "solvable should have a head because it has a lenght of 1")
-
-                    else if List.length unsolvables == Dict.size choices - 1 then
+                    _ ->
                         let
-                            badChoices =
-                                unsolvables
-                                    |> List.map Tuple.first
-                        in
-                        verdicts
-                            |> List.filter (\( d, _ ) -> not <| List.member d badChoices)
-                            |> List.head
-                            |> Maybe.map (\( d, _ ) -> Solvable <| Fill cell d)
-                            |> Maybe.withDefault (Unsolvable <| LogicError "verdicts should leave a head after filter because it has a one less bad choice then total choices")
+                            verdicts =
+                                choices
+                                    |> Dict.toList
+                                    |> List.map (\( d, t ) -> ( d, verdict (execute (Fill cell d) problem) t ))
 
-                    else
-                        Indeterminate
+                            isSolvable v =
+                                case v of
+                                    Solvable _ ->
+                                        True
+
+                                    _ ->
+                                        False
+
+                            isUnsolvable v =
+                                case v of
+                                    Unsolvable _ ->
+                                        True
+
+                                    _ ->
+                                        False
+
+                            solvables =
+                                verdicts
+                                    |> List.filter (Tuple.second >> isSolvable)
+
+                            unsolvables =
+                                verdicts
+                                    |> List.filter (Tuple.second >> isUnsolvable)
+                        in
+                        if List.length solvables >= 2 then
+                            Unsolvable UnderConstrained
+
+                        else if List.length solvables == 1 then
+                            let
+                                prependAction ( d, v ) =
+                                    case v of
+                                        Solvable actions ->
+                                            Just <| Solvable <| Fill cell d :: actions
+
+                                        _ ->
+                                            Nothing
+                            in
+                            solvables
+                                |> List.head
+                                |> Maybe.andThen prependAction
+                                |> Maybe.withDefault (Unsolvable <| LogicError "solvable should have a head because it has a lenght of 1")
+
+                        else if List.length unsolvables == Dict.size choices - 1 then
+                            let
+                                badChoices =
+                                    unsolvables
+                                        |> List.map Tuple.first
+                            in
+                            verdicts
+                                |> List.filter (\( d, _ ) -> not <| List.member d badChoices)
+                                |> List.head
+                                |> Maybe.map (\( d, _ ) -> Solvable <| List.singleton <| Fill cell d)
+                                |> Maybe.withDefault (Unsolvable <| LogicError "verdicts should leave a head after filter because it has a one less bad choice then total choices")
+
+                        else
+                            Indeterminate
 
 
 type Suggestion
@@ -376,11 +390,7 @@ candidateSizeIndex ( leftCell, leftCandidates ) ( rightCell, rightCandidates ) =
 
 
 
--- VIEW
-
-
-type alias Info =
-    { m : Int }
+-- UPDATE
 
 
 type Msg
@@ -398,6 +408,14 @@ update msg problem =
             action
                 |> Maybe.map (\a -> ( execute a problem, Just a ))
                 |> Maybe.withDefault ( problem, Nothing )
+
+
+
+-- VIEW
+
+
+type alias Info =
+    { m : Int }
 
 
 view : Info -> Problem -> Html msg
