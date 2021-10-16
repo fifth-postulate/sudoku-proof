@@ -1,4 +1,4 @@
-module Sudoku exposing (Action, Fuel(..), Info, Msg(..), Problem, Strategy, Suggestion, clue, emptySudoku, execute, isSolved, shouldBe, solve, solveWithFuel, update, view, viewAction)
+module Sudoku exposing (Action, Fuel(..), Info, Msg(..), Problem, Strategy, clue, emptySudoku, execute, isSolved, solve, solveWithFuel, update, view, viewAction)
 
 import Array exposing (Array)
 import Array.Util as Util
@@ -7,7 +7,6 @@ import Dict exposing (Dict)
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Set exposing (Set)
-import Set.Util exposing (pick)
 import Stream exposing (Stream)
 import Sudoku.Blocks as Blocks
 
@@ -168,44 +167,39 @@ solve =
 
 solveWithFuel : Fuel -> Strategy
 solveWithFuel fuel problem =
-    firstSuggestionFromStream fuel (Stream.singleton Seed) problem
+    firstSuggestionFromStream fuel (Stream.singleton seed) problem
 
 
-type Tree
-    = Node Cell (Dict Domain Tree)
-    | Seed
+type alias Plan =
+    List Action
 
 
-root : Cell -> Set Domain -> Tree
-root cell cs =
-    let
-        options =
-            cs
-                |> Set.toList
-                |> List.map (\d -> ( d, Seed ))
-                |> Dict.fromList
-    in
-    Node cell options
+seed : Plan
+seed =
+    []
 
 
-firstSuggestionFromStream : Fuel -> Stream Tree -> Strategy
+firstSuggestionFromStream : Fuel -> Stream Plan -> Strategy
 firstSuggestionFromStream fuel stream problem =
     stream
         |> Stream.head
-        |> Maybe.andThen (firstSuggestionFromTree fuel problem)
+        |> Maybe.andThen (firstSuggestionFromPlan fuel problem)
 
 
-firstSuggestionFromTree : Fuel -> Problem -> ( Tree, Stream Tree ) -> Maybe Action
-firstSuggestionFromTree fuel problem ( tree, stream ) =
-    case verdict problem tree of
-        Solvable action ->
-            List.head action
+firstSuggestionFromPlan : Fuel -> Problem -> ( Plan, Stream Plan ) -> Maybe Action
+firstSuggestionFromPlan fuel problem ( plan, stream ) =
+    case verdict problem plan of
+        Solved ->
+            List.head plan
 
-        Indeterminate ->
+        Indeterminate followups ->
             let
                 augmentedStream =
-                    stream
-                        |> Stream.afterwards (\_ -> grow problem tree)
+                    followups
+                        |> List.map (\action -> plan ++ [ action ])
+                        |> List.map Stream.singleton
+                        |> List.map (\s -> \_ -> s)
+                        |> List.foldl Stream.afterwards stream
             in
             consume fuel
                 |> Maybe.andThen
@@ -218,8 +212,8 @@ firstSuggestionFromTree fuel problem ( tree, stream ) =
 
 
 type Verdict
-    = Solvable (List Action)
-    | Indeterminate
+    = Solved
+    | Indeterminate (List Action)
     | Unsolvable Reason
 
 
@@ -229,164 +223,40 @@ type Reason
     | LogicError String
 
 
-verdict : Problem -> Tree -> Verdict
-verdict ((Problem { states }) as problem) tree =
+verdict : Problem -> Plan -> Verdict
+verdict problem plan =
     let
-        anyStateWithNoCandidates =
+        result =
+            List.foldl execute problem plan
+
+        hasStatesWithNoCandidates (Problem { states }) =
             Util.any (\c -> (not <| isDetermined c) && (Set.isEmpty <| candidates c)) states
     in
-    if anyStateWithNoCandidates then
+    if isSolved result then
+        Solved
+
+    else if hasStatesWithNoCandidates result then
         Unsolvable OverConstrained
 
     else
-        case tree of
-            Seed ->
-                if isSolved problem then
-                    Solvable []
-
-                else
-                    Indeterminate
-
-            Node cell choices ->
+        let
+            indeterminate (Problem { states }) =
                 let
-                    options : Set Domain
-                    options =
+                    toAction ( cell, options ) =
+                        options
+                            |> Set.toList
+                            |> List.map (\option -> Fill cell option)
+
+                    followups =
                         states
-                            |> Array.get cell
-                            |> Maybe.map candidates
-                            |> Maybe.withDefault Set.empty
+                            |> Array.indexedMap (\cell state -> ( cell, candidates state ))
+                            |> Array.toList
+                            |> List.filter (\( _, options ) -> 0 < Set.size options)
+                            |> List.concatMap toAction
                 in
-                case Set.size options of
-                    0 ->
-                        Unsolvable <| LogicError "a state with 0 options should be caught earlier"
-
-                    _ ->
-                        let
-                            verdicts =
-                                choices
-                                    |> Dict.toList
-                                    |> List.map (\( d, t ) -> ( d, verdict (execute (Fill cell d) problem) t ))
-
-                            isSolvable v =
-                                case v of
-                                    Solvable _ ->
-                                        True
-
-                                    _ ->
-                                        False
-
-                            isUnsolvable v =
-                                case v of
-                                    Unsolvable _ ->
-                                        True
-
-                                    _ ->
-                                        False
-
-                            solvables =
-                                verdicts
-                                    |> List.filter (Tuple.second >> isSolvable)
-
-                            unsolvables =
-                                verdicts
-                                    |> List.filter (Tuple.second >> isUnsolvable)
-                        in
-                        if List.length solvables >= 2 then
-                            Unsolvable UnderConstrained
-
-                        else if List.length solvables == 1 then
-                            let
-                                prependAction ( d, v ) =
-                                    case v of
-                                        Solvable actions ->
-                                            Just <| Solvable <| Fill cell d :: actions
-
-                                        _ ->
-                                            Nothing
-                            in
-                            solvables
-                                |> List.head
-                                |> Maybe.andThen prependAction
-                                |> Maybe.withDefault (Unsolvable <| LogicError "solvable should have a head because it has a lenght of 1")
-
-                        else if List.length unsolvables == Dict.size choices - 1 then
-                            let
-                                badChoices =
-                                    unsolvables
-                                        |> List.map Tuple.first
-                            in
-                            verdicts
-                                |> List.filter (\( d, _ ) -> not <| List.member d badChoices)
-                                |> List.head
-                                |> Maybe.map (\( d, _ ) -> Solvable <| List.singleton <| Fill cell d)
-                                |> Maybe.withDefault (Unsolvable <| LogicError "verdicts should leave a head after filter because it has a one less bad choice then total choices")
-
-                        else
-                            Indeterminate
-
-
-type Suggestion
-    = ShouldBe Domain
-
-
-shouldBe : Domain -> Suggestion
-shouldBe =
-    ShouldBe
-
-
-actOn : Cell -> Suggestion -> Action
-actOn cell (ShouldBe d) =
-    Fill cell d
-
-
-grow : Problem -> Tree -> Stream Tree
-grow ((Problem { states }) as problem) tree =
-    case tree of
-        Seed ->
-            states
-                |> Array.toIndexedList
-                |> List.filter (\( _, state ) -> not <| isDetermined state)
-                |> List.map (Tuple.mapSecond candidates)
-                |> List.sortWith candidateSizeIndex
-                |> List.map (\( c, ds ) -> root c ds)
-                |> Stream.fromList
-
-        Node cell choices ->
-            let
-                streamAfterChoice : ( Domain, Tree ) -> Stream ( Domain, Tree )
-                streamAfterChoice ( d, t ) =
-                    let
-                        action =
-                            actOn cell (shouldBe d)
-
-                        futureProblem =
-                            execute action problem
-                    in
-                    case verdict futureProblem t of
-                        Indeterminate ->
-                            Stream.eventually (\_ -> grow futureProblem t)
-                                |> Stream.map (Tuple.pair d)
-
-                        _ ->
-                            Stream.constant t
-                                |> Stream.map (Tuple.pair d)
-            in
-            choices
-                |> Dict.toList
-                |> List.map streamAfterChoice
-                |> Stream.zipList
-                |> Stream.map Dict.fromList
-                |> Stream.map (Node cell)
-
-
-candidateSizeIndex : ( Int, Set Domain ) -> ( Int, Set Domain ) -> Order
-candidateSizeIndex ( leftCell, leftCandidates ) ( rightCell, rightCandidates ) =
-    case compare (Set.size leftCandidates) (Set.size rightCandidates) of
-        EQ ->
-            compare leftCell rightCell
-
-        _ as order ->
-            order
+                Indeterminate followups
+        in
+        indeterminate result
 
 
 
