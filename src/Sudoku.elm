@@ -1,9 +1,8 @@
-module Sudoku exposing (Action, Fuel(..), Info, Msg(..), Problem, Strategy, clue, emptySudoku, execute, isSolved, solve, solveWithFuel, update, view, viewAction)
+module Sudoku exposing (Action, Fuel(..), Info, Plan, Problem, Strategy, clue, emptySudoku, execute, isSolved, solve, solveWithFuel, view, viewAction)
 
 import Array exposing (Array)
 import Array.Util as Util
 import Css exposing (..)
-import Dict exposing (Dict)
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Set exposing (Set)
@@ -139,7 +138,7 @@ apply consequence states =
 
 
 type alias Strategy =
-    Problem -> Maybe Action
+    Problem -> Maybe Plan
 
 
 type Fuel
@@ -186,11 +185,11 @@ firstSuggestionFromStream fuel stream problem =
         |> Maybe.andThen (firstSuggestionFromPlan fuel problem)
 
 
-firstSuggestionFromPlan : Fuel -> Problem -> ( Plan, Stream Plan ) -> Maybe Action
+firstSuggestionFromPlan : Fuel -> Problem -> ( Plan, Stream Plan ) -> Maybe Plan
 firstSuggestionFromPlan fuel problem ( plan, stream ) =
     case verdict problem plan of
         Solved ->
-            List.head plan
+            Just plan
 
         Indeterminate followups ->
             let
@@ -231,6 +230,22 @@ verdict problem plan =
 
         hasStatesWithNoCandidates (Problem { states }) =
             Util.any (\c -> (not <| isDetermined c) && (Set.isEmpty <| candidates c)) states
+
+        indeterminate (Problem { states }) =
+            let
+                toAction ( cell, options ) =
+                    options
+                        |> Set.toList
+                        |> List.map (\option -> Fill cell option)
+
+                followups =
+                    states
+                        |> Array.indexedMap (\cell state -> ( cell, candidates state ))
+                        |> Array.toList
+                        |> List.filter (\( _, options ) -> 0 < Set.size options)
+                        |> List.concatMap toAction
+            in
+            Indeterminate followups
     in
     if isSolved result then
         Solved
@@ -239,45 +254,7 @@ verdict problem plan =
         Unsolvable OverConstrained
 
     else
-        let
-            indeterminate (Problem { states }) =
-                let
-                    toAction ( cell, options ) =
-                        options
-                            |> Set.toList
-                            |> List.map (\option -> Fill cell option)
-
-                    followups =
-                        states
-                            |> Array.indexedMap (\cell state -> ( cell, candidates state ))
-                            |> Array.toList
-                            |> List.filter (\( _, options ) -> 0 < Set.size options)
-                            |> List.concatMap toAction
-                in
-                Indeterminate followups
-        in
         indeterminate result
-
-
-
--- UPDATE
-
-
-type Msg
-    = Advance
-
-
-update : Msg -> Problem -> ( Problem, Maybe Action )
-update msg problem =
-    let
-        action =
-            solve problem
-    in
-    case msg of
-        Advance ->
-            action
-                |> Maybe.map (\a -> ( execute a problem, Just a ))
-                |> Maybe.withDefault ( problem, Nothing )
 
 
 

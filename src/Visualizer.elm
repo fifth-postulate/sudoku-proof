@@ -4,13 +4,13 @@ import Browser
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
-import Sudoku exposing (Action, Info, Msg(..), Problem, clue, emptySudoku)
+import Sudoku exposing (Action, Info, Plan, Problem, clue, emptySudoku)
 
 
 main =
     let
         info =
-            { m = 9 }
+            { m = 4 }
     in
     Browser.sandbox
         { init = init info
@@ -21,6 +21,7 @@ main =
 
 type alias Model =
     { problem : Problem
+    , plan : Maybe Plan
     , actions : List Action
     }
 
@@ -30,57 +31,61 @@ init info =
     let
         problem =
             emptySudoku info.m
-                |> clue 2 9
-                |> clue 4 5
-                |> clue 9 5
-                |> clue 10 3
-                |> clue 13 8
+                |> clue 0 2
+                |> clue 5 3
+                |> clue 11 2
                 |> clue 14 4
-                |> clue 16 2
-                |> clue 21 6
-                |> clue 26 4
-                |> clue 27 4
-                |> clue 29 6
-                |> clue 31 3
-                |> clue 37 1
-                |> clue 38 8
-                |> clue 44 9
-                |> clue 51 2
-                |> clue 61 5
-                |> clue 64 8
-                |> clue 69 7
-                |> clue 75 5
-                |> clue 76 6
-                |> clue 77 1
-                |> clue 78 9
     in
-    { problem = problem, actions = [] }
+    { problem = problem, plan = Nothing, actions = [] }
 
 
-update : Sudoku.Msg -> Model -> Model
+type Msg
+    = Solve
+    | Advance
+
+
+update : Msg -> Model -> Model
 update msg model =
-    let
-        ( problem, action ) =
-            model.problem
-                |> Sudoku.update msg
+    case msg of
+        Solve ->
+            let
+                plan =
+                    Sudoku.solve model.problem
+            in
+            { model | plan = plan }
 
-        actions =
+        Advance ->
+            let
+                action =
+                    model.plan
+                        |> Maybe.andThen List.head
+            in
             action
-                |> Maybe.map (\a -> a :: model.actions)
-                |> Maybe.withDefault model.actions
-    in
-    { model | problem = problem, actions = actions }
+                |> Maybe.map (\a -> { model | plan = model.plan |> Maybe.andThen List.tail, actions = a :: model.actions })
+                |> Maybe.withDefault model
 
 
-view : Info -> Model -> Html Sudoku.Msg
+view : Info -> Model -> Html Msg
 view info model =
     Html.div []
-        [ Html.button [ Event.onClick Advance, Attribute.disabled <| Sudoku.isSolved model.problem ] [ Html.text "↻" ]
+        [ Html.button [ Event.onClick Solve, Attribute.disabled <| hasPlan model ] [ Html.text "🝢" ]
+        , Html.button [ Event.onClick Advance, Attribute.disabled <| not <| hasPlan model ] [ Html.text "🍍" ]
         , Html.div []
-            [ Sudoku.view info model.problem
+            [ viewPlan model.plan
+            , Sudoku.view info model.problem
             , viewActions model.actions
             ]
         ]
+
+
+hasPlan : Model -> Bool
+hasPlan { plan } =
+    case plan of
+        Just _ ->
+            True
+
+        Nothing ->
+            False
 
 
 viewActions : List Action -> Html msg
@@ -93,3 +98,14 @@ viewAction action =
     Html.li []
         [ Sudoku.viewAction action
         ]
+
+viewPlan : Maybe Plan -> Html msg
+viewPlan option =
+    let
+        content =
+            case option of
+               Just plan -> Debug.toString plan
+
+               Nothing -> "?"
+    in
+    Html.span [] [Html.text content]
