@@ -5,8 +5,8 @@ import Array.Util as Util
 import Css exposing (..)
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
+import PriorityQueue exposing (PriorityQueue)
 import Set exposing (Set)
-import Stream exposing (Stream)
 import Sudoku.Blocks as Blocks
 
 
@@ -166,11 +166,22 @@ solve =
 
 solveWithFuel : Fuel -> Strategy
 solveWithFuel fuel problem =
-    firstSuggestionFromStream fuel (Stream.singleton seed) problem
+    let
+        priority : Plan -> Int
+        priority plan =
+            plan
+                |> List.map Tuple.second
+                |> List.foldl (*) 1
+
+        queue =
+            PriorityQueue.empty priority
+                |> PriorityQueue.insert seed
+    in
+    firstSuggestionFromQueue fuel queue problem
 
 
 type alias Plan =
-    List Action
+    List ( Action, Int )
 
 
 seed : Plan
@@ -178,41 +189,45 @@ seed =
     []
 
 
-firstSuggestionFromStream : Fuel -> Stream Plan -> Strategy
-firstSuggestionFromStream fuel stream problem =
-    stream
-        |> Stream.head
-        |> Maybe.andThen (firstSuggestionFromPlan fuel problem)
+firstSuggestionFromQueue : Fuel -> PriorityQueue Plan -> Strategy
+firstSuggestionFromQueue fuel queue problem =
+    let
+        plan =
+            PriorityQueue.head queue
+
+        remaining =
+            PriorityQueue.tail queue
+    in
+    plan
+        |> Maybe.andThen (firstSuggestionFromPlan fuel problem remaining)
 
 
-firstSuggestionFromPlan : Fuel -> Problem -> ( Plan, Stream Plan ) -> Maybe Plan
-firstSuggestionFromPlan fuel problem ( plan, stream ) =
+firstSuggestionFromPlan : Fuel -> Problem -> PriorityQueue Plan -> Plan -> Maybe Plan
+firstSuggestionFromPlan fuel problem queue plan =
     case verdict problem plan of
         Solved ->
             Just plan
 
         Indeterminate followups ->
             let
-                augmentedStream =
+                augmentedQueue =
                     followups
-                        |> List.map (\action -> plan ++ [ action ])
-                        |> List.map Stream.singleton
-                        |> List.map (\s -> \_ -> s)
-                        |> List.foldl Stream.afterwards stream
+                        |> List.map (\followup -> plan ++ [ followup ])
+                        |> List.foldl PriorityQueue.insert queue
             in
             consume fuel
                 |> Maybe.andThen
-                    (\f -> firstSuggestionFromStream f augmentedStream problem)
+                    (\f -> firstSuggestionFromQueue f augmentedQueue problem)
 
         Unsolvable _ ->
             consume fuel
                 |> Maybe.andThen
-                    (\f -> firstSuggestionFromStream f stream problem)
+                    (\f -> firstSuggestionFromQueue f queue problem)
 
 
 type Verdict
     = Solved
-    | Indeterminate (List Action)
+    | Indeterminate (List ( Action, Int ))
     | Unsolvable Reason
 
 
@@ -226,7 +241,9 @@ verdict : Problem -> Plan -> Verdict
 verdict problem plan =
     let
         result =
-            List.foldl execute problem plan
+            plan
+                |> List.map Tuple.first
+                |> List.foldl execute problem
 
         hasStatesWithNoCandidates (Problem { states }) =
             Util.any (\c -> (not <| isDetermined c) && (Set.isEmpty <| candidates c)) states
@@ -236,7 +253,7 @@ verdict problem plan =
                 toAction ( cell, options ) =
                     options
                         |> Set.toList
-                        |> List.map (\option -> Fill cell option)
+                        |> List.map (\option -> ( Fill cell option, Set.size options ))
 
                 followups =
                     states

@@ -59,9 +59,10 @@ update msg model =
                 action =
                     model.plan
                         |> Maybe.andThen List.head
+                        |> Maybe.map Tuple.first
             in
             action
-                |> Maybe.map (\a -> { model | plan = model.plan |> Maybe.andThen List.tail, actions = a :: model.actions })
+                |> Maybe.map (\a -> { model | plan = model.plan |> Maybe.andThen List.tail, actions = a :: model.actions, problem = Sudoku.execute a model.problem })
                 |> Maybe.withDefault model
 
 
@@ -99,13 +100,16 @@ viewAction action =
         [ Sudoku.viewAction action
         ]
 
+
 viewPlan : Maybe Plan -> Html msg
 viewPlan option =
     let
         content =
             case option of
-               Just plan -> Debug.toString plan
+                Just plan ->
+                    Debug.toString plan
 
-               Nothing -> "?"
+                Nothing ->
+                    "?"
     in
-    Html.span [] [Html.text content]
+    Html.span [] [ Html.text content ]
