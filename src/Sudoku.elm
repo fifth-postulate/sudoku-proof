@@ -1,11 +1,10 @@
-module Sudoku exposing (Action, Fuel(..), Info, Plan, Problem, Strategy, clue, emptySudoku, execute, isSolved, solve, solveWithFuel, view, viewAction)
+module Sudoku exposing (Action, Info, Problem, clue, emptySudoku, execute, fill, isOverConstrained, isSolved, options, view, viewAction)
 
 import Array exposing (Array)
 import Array.Util as Util
 import Css exposing (..)
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
-import PriorityQueue exposing (PriorityQueue)
 import Set exposing (Set)
 import Sudoku.Blocks as Blocks
 
@@ -16,7 +15,7 @@ type Problem
 
 type State
     = Determined Domain
-    | Candidates (Set Domain)
+    | Options (Set Domain)
 
 
 type alias Domain =
@@ -36,6 +35,11 @@ isSolved (Problem { states }) =
     Util.all isDetermined states
 
 
+isOverConstrained : Problem -> Bool
+isOverConstrained (Problem { states }) =
+    Util.any (\c -> (not <| isDetermined c) && (Set.isEmpty <| candidates c)) states
+
+
 isDetermined : State -> Bool
 isDetermined state =
     case state of
@@ -52,8 +56,15 @@ candidates state =
         Determined _ ->
             Set.empty
 
-        Candidates domain ->
+        Options domain ->
             domain
+
+
+options : Problem -> List ( Cell, Set Domain )
+options (Problem { states }) =
+    states
+        |> Array.indexedMap (\cell state -> ( cell, candidates state ))
+        |> Array.toList
 
 
 emptySudoku : Int -> Problem
@@ -66,7 +77,7 @@ emptySudoku m =
             m
                 |> List.range 1
                 |> Set.fromList
-                |> Candidates
+                |> Options
 
         states =
             emptyState
@@ -82,6 +93,11 @@ clue cell d =
 
 type Action
     = Fill Cell Domain
+
+
+fill : Cell -> Domain -> Action
+fill =
+    Fill
 
 
 execute : Action -> Problem -> Problem
@@ -122,10 +138,10 @@ apply consequence states =
                         Determined v ->
                             Determined v
 
-                        Candidates domain ->
+                        Options domain ->
                             domain
                                 |> Set.remove d
-                                |> Candidates
+                                |> Options
 
                 updatedState =
                     states
@@ -135,143 +151,6 @@ apply consequence states =
             updatedState
                 |> Maybe.map (\s -> Array.set cell s states)
                 |> Maybe.withDefault states
-
-
-type alias Strategy =
-    Problem -> Maybe Plan
-
-
-type Fuel
-    = Finite Int
-    | Infinite
-
-
-consume : Fuel -> Maybe Fuel
-consume fuel =
-    case fuel of
-        Finite 0 ->
-            Nothing
-
-        Finite n ->
-            Just <| Finite <| n - 1
-
-        Infinite ->
-            Just <| Infinite
-
-
-solve : Strategy
-solve =
-    solveWithFuel Infinite
-
-
-solveWithFuel : Fuel -> Strategy
-solveWithFuel fuel problem =
-    let
-        priority : Plan -> Int
-        priority plan =
-            plan
-                |> List.map Tuple.second
-                |> List.foldl (*) 1
-
-        queue =
-            PriorityQueue.empty priority
-                |> PriorityQueue.insert seed
-    in
-    firstSuggestionFromQueue fuel queue problem
-
-
-type alias Plan =
-    List ( Action, Int )
-
-
-seed : Plan
-seed =
-    []
-
-
-firstSuggestionFromQueue : Fuel -> PriorityQueue Plan -> Strategy
-firstSuggestionFromQueue fuel queue problem =
-    let
-        plan =
-            PriorityQueue.head queue
-
-        remaining =
-            PriorityQueue.tail queue
-    in
-    plan
-        |> Maybe.andThen (firstSuggestionFromPlan fuel problem remaining)
-
-
-firstSuggestionFromPlan : Fuel -> Problem -> PriorityQueue Plan -> Plan -> Maybe Plan
-firstSuggestionFromPlan fuel problem queue plan =
-    case verdict problem plan of
-        Solved ->
-            Just plan
-
-        Indeterminate followups ->
-            let
-                augmentedQueue =
-                    followups
-                        |> List.map (\followup -> plan ++ [ followup ])
-                        |> List.foldl PriorityQueue.insert queue
-            in
-            consume fuel
-                |> Maybe.andThen
-                    (\f -> firstSuggestionFromQueue f augmentedQueue problem)
-
-        Unsolvable _ ->
-            consume fuel
-                |> Maybe.andThen
-                    (\f -> firstSuggestionFromQueue f queue problem)
-
-
-type Verdict
-    = Solved
-    | Indeterminate (List ( Action, Int ))
-    | Unsolvable Reason
-
-
-type Reason
-    = UnderConstrained
-    | OverConstrained
-    | LogicError String
-
-
-verdict : Problem -> Plan -> Verdict
-verdict problem plan =
-    let
-        result =
-            plan
-                |> List.map Tuple.first
-                |> List.foldl execute problem
-
-        hasStatesWithNoCandidates (Problem { states }) =
-            Util.any (\c -> (not <| isDetermined c) && (Set.isEmpty <| candidates c)) states
-
-        indeterminate (Problem { states }) =
-            let
-                toAction ( cell, options ) =
-                    options
-                        |> Set.toList
-                        |> List.map (\option -> ( Fill cell option, Set.size options ))
-
-                followups =
-                    states
-                        |> Array.indexedMap (\cell state -> ( cell, candidates state ))
-                        |> Array.toList
-                        |> List.filter (\( _, options ) -> 0 < Set.size options)
-                        |> List.concatMap toAction
-            in
-            Indeterminate followups
-    in
-    if isSolved result then
-        Solved
-
-    else if hasStatesWithNoCandidates result then
-        Unsolvable OverConstrained
-
-    else
-        indeterminate result
 
 
 
@@ -319,7 +198,7 @@ viewCell m problem index cell =
                 Determined v ->
                     String.fromInt v
 
-                Candidates cs ->
+                Options cs ->
                     cs
                         |> Set.toList
                         |> List.map String.fromInt
@@ -331,7 +210,7 @@ viewCell m problem index cell =
                 Determined _ ->
                     rgb 0 0 0
 
-                Candidates _ ->
+                Options _ ->
                     rgb 200 200 200
 
         size =
@@ -339,7 +218,7 @@ viewCell m problem index cell =
                 Determined _ ->
                     medium
 
-                Candidates _ ->
+                Options _ ->
                     xxSmall
     in
     Html.div

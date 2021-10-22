@@ -4,7 +4,8 @@ import Browser
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
-import Sudoku exposing (Action, Info, Plan, Problem, clue, emptySudoku)
+import Sudoku exposing (Action, Info, Problem, clue, emptySudoku)
+import Sudoku.Solver exposing (Plan, solve)
 
 
 main =
@@ -50,7 +51,7 @@ update msg model =
         Solve ->
             let
                 plan =
-                    Sudoku.solve model.problem
+                    solve model.problem
             in
             { model | plan = plan }
 
