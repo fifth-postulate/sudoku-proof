@@ -69,7 +69,7 @@ firstSuggestionFromPlan fuel problem queue plan =
                 augmentedQueue =
                     followups
                         |> List.map (\followup -> plan ++ [ followup ])
-                        |> List.foldl PriorityQueue.insert queue
+                        |> List.foldr PriorityQueue.insert queue
             in
             consume fuel
                 |> Maybe.andThen
