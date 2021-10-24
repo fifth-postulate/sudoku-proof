@@ -1,4 +1,4 @@
-module Sudoku.Execute exposing (Model, Msg, empty, update, view)
+module Sudoku.Execute exposing (Model, Msg, empty, toProblem, update, view)
 
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
@@ -17,6 +17,11 @@ type alias Model =
 empty : Problem -> Model
 empty problem =
     { problem = problem, plan = Nothing, actions = [] }
+
+
+toProblem : Model -> Problem
+toProblem { problem } =
+    problem
 
 
 type Msg

@@ -1,4 +1,4 @@
-module Sudoku.Entry exposing (Model, Msg, empty, toProblem, update, view)
+module Sudoku.Entry exposing (Model, Msg, empty, fromProblem, toProblem, update, view)
 
 import Css exposing (..)
 import Html.Events.Extra exposing (targetValueIntParse, targetValueMaybeInt)
@@ -16,6 +16,16 @@ type alias Model =
 empty : Int -> Model
 empty m =
     { m = m, clues = [] }
+
+
+fromProblem : Int -> Problem -> Model
+fromProblem size problem =
+    let
+        clues =
+            problem
+                |> Sudoku.toClues
+    in
+    { m = size, clues = clues }
 
 
 toProblem : Model -> Problem

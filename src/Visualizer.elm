@@ -35,6 +35,7 @@ type Msg
     = PrepareMsg Entry.Msg
     | PlayMsg Execute.Msg
     | GoPlay
+    | Stop
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -66,6 +67,13 @@ update message model =
             in
             ( Play info m, Cmd.none )
 
+        ( Stop, Play info mdl ) ->
+            let
+                problem =
+                    Execute.toProblem mdl
+            in
+            ( Prepare <| Entry.fromProblem info.m problem, Cmd.none )
+
         _ ->
             ( model, Cmd.none )
 
@@ -87,7 +95,7 @@ viewControl model =
                     [ Html.button [ Event.onClick GoPlay ] [ Html.text "▶️" ] ]
 
                 Play _ mdl ->
-                    []
+                    [ Html.button [ Event.onClick Stop ] [ Html.text "⏹️" ] ]
     in
     Html.div [] content
 

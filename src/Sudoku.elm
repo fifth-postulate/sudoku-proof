@@ -1,4 +1,4 @@
-module Sudoku exposing (Action, Cell, Domain, Info, Problem, clue, emptySudoku, execute, fill, isOverConstrained, isSolved, options, view, viewAction)
+module Sudoku exposing (Action, Cell, Domain, Info, Problem, clue, emptySudoku, execute, fill, isOverConstrained, isSolved, options, toClues, view, viewAction)
 
 import Array exposing (Array)
 import Array.Util as Util
@@ -58,6 +58,29 @@ candidates state =
 
         Options domain ->
             domain
+
+
+toClues : Problem -> List ( Cell, Domain )
+toClues (Problem { states }) =
+    let
+        toValue state =
+            case state of
+                Determined v ->
+                    v
+
+                Options _ ->
+                    -- This option is impossible
+                    0
+
+        lift : (State -> a) -> ( Cell, State ) -> ( Cell, a )
+        lift f ( cell, state ) =
+            ( cell, f state )
+    in
+    states
+        |> Array.indexedMap (\cell state -> ( cell, state ))
+        |> Array.filter (Tuple.second >> isDetermined)
+        |> Array.map (lift toValue)
+        |> Array.toList
 
 
 options : Problem -> List ( Cell, Set Domain )
