@@ -2,115 +2,106 @@ module Visualizer exposing (..)
 
 import Browser
 import Html.Styled as Html exposing (Html)
-import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
-import Sudoku exposing (Action, Info, Problem, clue, emptySudoku)
-import Sudoku.Solver exposing (Plan, solve)
+import Sudoku.Entry as Entry
+import Sudoku.Execute as Execute
 
 
+main : Program {} Model Msg
 main =
-    let
-        info =
-            { m = 4 }
-    in
-    Browser.sandbox
-        { init = init info
+    Browser.element
+        { init = \_ -> init 4
         , update = update
-        , view = view info >> Html.toUnstyled
+        , view = view >> Html.toUnstyled
+        , subscriptions = subscriptions
         }
 
 
-type alias Model =
-    { problem : Problem
-    , plan : Maybe Plan
-    , actions : List Action
-    }
+type Model
+    = Prepare Entry.Model
+    | Play Info Execute.Model
 
 
-init : Info -> Model
-init info =
-    let
-        problem =
-            emptySudoku info.m
-                |> clue 0 2
-                |> clue 5 3
-                |> clue 11 2
-                |> clue 14 4
-    in
-    { problem = problem, plan = Nothing, actions = [] }
+type alias Info =
+    { m : Int }
+
+
+init : Int -> ( Model, Cmd Msg )
+init m =
+    ( Prepare <| Entry.empty m, Cmd.none )
 
 
 type Msg
-    = Solve
-    | Advance
+    = PrepareMsg Entry.Msg
+    | PlayMsg Execute.Msg
+    | GoPlay
 
 
-update : Msg -> Model -> Model
-update msg model =
-    case msg of
-        Solve ->
+update : Msg -> Model -> ( Model, Cmd Msg )
+update message model =
+    case ( message, model ) of
+        ( PrepareMsg msg, Prepare mdl ) ->
             let
-                plan =
-                    solve model.problem
+                ( m, cmd ) =
+                    Entry.update msg mdl
             in
-            { model | plan = plan }
+            ( Prepare m, Cmd.map PrepareMsg cmd )
 
-        Advance ->
+        ( GoPlay, Prepare mdl ) ->
             let
-                action =
-                    model.plan
-                        |> Maybe.andThen List.head
-                        |> Maybe.map Tuple.first
+                info =
+                    { m = mdl.m }
+
+                m =
+                    mdl
+                        |> Entry.toProblem
+                        |> Execute.empty
             in
-            action
-                |> Maybe.map (\a -> { model | plan = model.plan |> Maybe.andThen List.tail, actions = a :: model.actions, problem = Sudoku.execute a model.problem })
-                |> Maybe.withDefault model
+            ( Play info m, Cmd.none )
+
+        ( PlayMsg msg, Play info mdl ) ->
+            let
+                m =
+                    Execute.update msg mdl
+            in
+            ( Play info m, Cmd.none )
+
+        _ ->
+            ( model, Cmd.none )
 
 
-view : Info -> Model -> Html Msg
-view info model =
+view : Model -> Html Msg
+view model =
     Html.div []
-        [ Html.button [ Event.onClick Solve, Attribute.disabled <| hasPlan model ] [ Html.text "🝢" ]
-        , Html.button [ Event.onClick Advance, Attribute.disabled <| not <| hasPlan model ] [ Html.text "🍍" ]
-        , Html.div []
-            [ viewPlan model.plan
-            , Sudoku.view info model.problem
-            , viewActions model.actions
-            ]
+        [ viewControl model
+        , viewContent model
         ]
 
 
-hasPlan : Model -> Bool
-hasPlan { plan } =
-    case plan of
-        Just _ ->
-            True
-
-        Nothing ->
-            False
-
-
-viewActions : List Action -> Html msg
-viewActions actions =
-    Html.ol [ Attribute.reversed True ] <| List.map viewAction actions
-
-
-viewAction : Action -> Html msg
-viewAction action =
-    Html.li []
-        [ Sudoku.viewAction action
-        ]
-
-
-viewPlan : Maybe Plan -> Html msg
-viewPlan option =
+viewControl : Model -> Html Msg
+viewControl model =
     let
         content =
-            case option of
-                Just plan ->
-                    Debug.toString plan
+            case model of
+                Prepare mdl ->
+                    [ Html.button [ Event.onClick GoPlay ] [ Html.text "▶️" ] ]
 
-                Nothing ->
-                    "?"
+                Play _ mdl ->
+                    []
     in
-    Html.span [] [ Html.text content ]
+    Html.div [] content
+
+
+viewContent : Model -> Html Msg
+viewContent model =
+    case model of
+        Prepare mdl ->
+            Html.map PrepareMsg <| Entry.view mdl
+
+        Play info mdl ->
+            Html.map PlayMsg <| Execute.view info mdl
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Sub.none
