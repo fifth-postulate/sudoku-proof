@@ -213,11 +213,11 @@ gridAutoRows size =
     property "grid-auto-rows" size
 
 
-viewCell : Int -> Problem -> Int -> State -> Html msg
-viewCell m problem index cell =
+viewCell : Int -> Problem -> Cell -> State -> Html msg
+viewCell m problem cell state =
     let
         content =
-            case cell of
+            case state of
                 Determined v ->
                     String.fromInt v
 
@@ -228,16 +228,22 @@ viewCell m problem index cell =
                         |> List.sort
                         |> String.join ","
 
+        black =
+            rgb 0 0 0
+
+        gray =
+            rgb 192 192 192
+
         color =
-            case cell of
+            case state of
                 Determined _ ->
-                    rgb 0 0 0
+                    black
 
                 Options _ ->
-                    rgb 200 200 200
+                    gray
 
         size =
-            case cell of
+            case state of
                 Determined _ ->
                     medium
 
@@ -246,7 +252,7 @@ viewCell m problem index cell =
     in
     Html.div
         [ Attribute.css
-            [ borderColor (rgb 192 192 192)
+            [ borderColor gray
             , borderWidth <| px 1
             , borderStyle solid
             , displayFlex
@@ -254,9 +260,21 @@ viewCell m problem index cell =
             , alignItems center
             , Css.color color
             , fontSize size
+            , position relative
             ]
         ]
-        [ Html.text content ]
+        [ Html.span [ Attribute.css [ Css.color color, fontSize size ] ] [ Html.text content ]
+        , Html.span
+            [ Attribute.css
+                [ Css.color gray
+                , fontSize xxSmall
+                , position absolute
+                , top (px 2)
+                , left (px 2)
+                ]
+            ]
+            [ Html.text <| String.fromInt cell ]
+        ]
 
 
 viewAction : Action -> Html msg

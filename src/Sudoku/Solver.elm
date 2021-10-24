@@ -1,8 +1,8 @@
-module Sudoku.Solver exposing (Plan, Strategy, solve)
+module Sudoku.Solver exposing (Plan, Strategy, complexity, solve)
 
 import Fuel exposing (Fuel(..), consume)
 import PriorityQueue exposing (PriorityQueue)
-import Set exposing (Set)
+import Set
 import Sudoku exposing (Action, Problem, execute, isOverConstrained, isSolved)
 
 
@@ -19,16 +19,21 @@ solveWithFuel : Fuel -> Strategy
 solveWithFuel fuel problem =
     let
         priority : Plan -> Int
-        priority plan =
-            plan
-                |> List.map Tuple.second
-                |> List.foldl (*) 1
+        priority =
+            complexity
 
         queue =
             PriorityQueue.empty priority
                 |> PriorityQueue.insert seed
     in
     firstSuggestionFromQueue fuel queue problem
+
+
+complexity : Plan -> Int
+complexity plan =
+    plan
+        |> List.map Tuple.second
+        |> List.foldl (*) 1
 
 
 type alias Plan =

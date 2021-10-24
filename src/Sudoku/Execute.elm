@@ -61,7 +61,7 @@ view info model =
         [ Html.button [ Event.onClick Solve, Attribute.disabled <| hasPlan model ] [ Html.text "🝢" ]
         , Html.button [ Event.onClick Advance, Attribute.disabled <| not <| hasPlan model ] [ Html.text "🍍" ]
         , Html.div []
-            [ viewPlan model.plan
+            [ viewPlanOption model.plan
             , Sudoku.view info model.problem
             , viewActions model.actions
             ]
@@ -90,15 +90,25 @@ viewAction action =
         ]
 
 
-viewPlan : Maybe Plan -> Html msg
-viewPlan option =
+viewPlanOption : Maybe Plan -> Html msg
+viewPlanOption option =
+    option
+        |> Maybe.map viewPlan
+        |> Maybe.withDefault defaultPlanView
+
+
+viewPlan : Plan -> Html msg
+viewPlan plan =
     let
         content =
-            case option of
-                Just plan ->
-                    Debug.toString plan
-
-                Nothing ->
-                    "?"
+            Debug.toString plan
     in
-    Html.span [] [ Html.text content ]
+    Html.span []
+        [ Html.span [] [ Html.text <| String.fromInt <| Solver.complexity plan ]
+        , Html.span [] [ Html.text content ]
+        ]
+
+
+defaultPlanView : Html msg
+defaultPlanView =
+    Html.span [] [ Html.text "?" ]
