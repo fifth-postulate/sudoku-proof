@@ -15,7 +15,7 @@ type alias Model =
 
 empty : Int -> Model
 empty m =
-    { m = m, clues = [ ( 0, 1 ), ( 1, 2 ), ( 2, 3 ), ( 3, 4 ), ( 4, 3 ) ] }
+    { m = m, clues = [] }
 
 
 fromProblem : Int -> Problem -> Model
@@ -48,15 +48,20 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        remove target clues =
+            clues
+                |> List.filter (\( c, _ ) -> not (c == target))
+    in
     case msg of
         SizeChanged m ->
             ( { model | m = m, clues = [] }, Cmd.none )
 
         ClueAdded cell value ->
-            ( { model | clues = ( cell, value ) :: model.clues }, Cmd.none )
+            ( { model | clues = ( cell, value ) :: remove cell model.clues }, Cmd.none )
 
         ClueRemoved cell ->
-            ( { model | clues = List.filter (\( c, _ ) -> not (c == cell)) model.clues }, Cmd.none )
+            ( { model | clues = remove cell model.clues }, Cmd.none )
 
 
 view : Model -> Html Msg
