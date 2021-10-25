@@ -1,4 +1,4 @@
-module Sudoku exposing (Action, Cell, Domain, Info, Problem, clue, emptySudoku, execute, fill, isOverConstrained, isSolved, options, toClues, view, viewAction)
+module Sudoku exposing (Action, Cell, Domain, Info, Problem, clue, emptySudoku, execute, fill, isOverConstrained, isSolved, options, toClue, toClues, view, viewAction)
 
 import Array exposing (Array)
 import Array.Util as Util
@@ -116,6 +116,11 @@ clue cell d =
 
 type Action
     = Fill Cell Domain
+
+
+toClue : Action -> ( Cell, Domain )
+toClue (Fill cell domain) =
+    ( cell, domain )
 
 
 fill : Cell -> Domain -> Action

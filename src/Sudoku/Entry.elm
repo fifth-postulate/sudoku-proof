@@ -15,7 +15,7 @@ type alias Model =
 
 empty : Int -> Model
 empty m =
-    { m = m, clues = [] }
+    { m = m, clues = [ ( 0, 1 ), ( 1, 2 ), ( 2, 3 ), ( 3, 4 ), ( 4, 3 ) ] }
 
 
 fromProblem : Int -> Problem -> Model
