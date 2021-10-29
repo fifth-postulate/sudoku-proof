@@ -91,10 +91,10 @@ viewControl model =
     let
         content =
             case model of
-                Prepare mdl ->
+                Prepare _ ->
                     [ Html.button [ Event.onClick GoPlay ] [ Html.text "▶️" ] ]
 
-                Play _ mdl ->
+                Play _ _ ->
                     [ Html.button [ Event.onClick Stop ] [ Html.text "⏹️" ] ]
     in
     Html.div [] content

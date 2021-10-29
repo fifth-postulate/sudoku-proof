@@ -1,4 +1,4 @@
-module Stream exposing (Stream, afterwards, constant, empty, eventually, fromList, head, map, singleton, zip, zipList)
+module Stream exposing (Stream, constant, empty, eventually, fromList, head, map, singleton, zip, zipList)
 
 import Stream.Queue as Queue exposing (Queue)
 

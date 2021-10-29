@@ -1,4 +1,4 @@
-module Sudoku.Blocks exposing (square, sudokuBlocks, sudokuSquares)
+module Sudoku.Blocks exposing (sudokuBlocks)
 
 import List.Util exposing (cartesianProduct)
 import Set exposing (Set)
