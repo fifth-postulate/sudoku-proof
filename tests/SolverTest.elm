@@ -2,7 +2,7 @@ module SolverTest exposing (..)
 
 import Expect
 import Sudoku exposing (Problem, clue)
-import Sudoku.Solver as Solver
+import Sudoku.Solver as Solver exposing (Plan)
 import Test exposing (..)
 
 
@@ -73,8 +73,14 @@ solveTest description problem expected =
     test description <|
         \_ ->
             let
+                complexity : Plan -> Int
+                complexity plan =
+                    plan
+                        |> List.map Tuple.second
+                        |> List.foldl (*) 1
+
                 suggestion =
-                    Solver.solve problem
+                    Solver.solve complexity problem
 
                 actual =
                     suggestion

@@ -47,8 +47,8 @@ firstSuggestionFromQueue queue problem =
                     let
                         augmentedQueue =
                             followups
-                            |> List.map (\followup -> plan ++ [ followup ])
-                            |> List.foldr PriorityQueue.insert remaining
+                                |> List.map (\followup -> plan ++ [ followup ])
+                                |> List.foldr PriorityQueue.insert remaining
                     in
                     firstSuggestionFromQueue augmentedQueue problem
 

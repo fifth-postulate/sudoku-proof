@@ -28,20 +28,5 @@ suite =
                     \subject ->
                         Expect.true "isPositive" <| (Array.length subject == 0) || Util.any (\n -> n > 0) subject
                 ]
-            , describe "indexedFoldl"
-                [ fuzz (array <| constant 1) "of sum works correctly" <|
-                    \subject ->
-                        Expect.equal (Array.length subject) <| Util.indexedFoldl (\( _, value ) acc -> acc + value) 0 subject
-                , fuzz (array <| constant 1) "of weighted sum works correctly" <|
-                    \subject ->
-                        let
-                            n =
-                                Array.length subject
-
-                            expected =
-                                (n * (n - 1)) // 2
-                        in
-                        Expect.equal expected <| Util.indexedFoldl (\( weight, value ) acc -> acc + weight * value) 0 subject
-                ]
             ]
         ]
