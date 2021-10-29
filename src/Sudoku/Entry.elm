@@ -59,7 +59,6 @@ update msg model =
 
         ClueAdded cell value ->
             ( { model | clues = ( cell, value ) :: remove cell model.clues }, Cmd.none )
-
         ClueRemoved cell ->
             ( { model | clues = remove cell model.clues }, Cmd.none )
 

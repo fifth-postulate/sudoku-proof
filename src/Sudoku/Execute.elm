@@ -45,7 +45,7 @@ update : Msg -> Model -> Model
 update message model =
     case ( message, model ) of
         ( Solve, Unsolved problem ) ->
-            Solver.solve problem
+            Solver.solve complexity problem
                 |> Maybe.map (\plan -> Solved problem { future = plan, history = [] })
                 |> Maybe.withDefault model
 
@@ -57,6 +57,13 @@ update message model =
 
         _ ->
             model
+
+
+complexity : Plan -> Int
+complexity plan =
+    plan
+        |> List.map Tuple.second
+        |> List.foldl (*) 1
 
 
 advance : Execution -> Execution
@@ -155,7 +162,7 @@ viewStep ( action, c ) =
 
 viewComplexity : Plan -> Html msg
 viewComplexity plan =
-    Html.span [] [ Html.text <| String.fromInt <| Solver.complexity plan ]
+    Html.span [] [ Html.text <| String.fromInt <| complexity plan ]
 
 
 viewHistory : Plan -> Html msg

@@ -1,6 +1,5 @@
-module Sudoku.Solver exposing (Plan, Strategy, complexity, solve)
+module Sudoku.Solver exposing (Plan, Strategy, solve)
 
-import Fuel exposing (Fuel(..), consume)
 import PriorityQueue exposing (PriorityQueue)
 import Set
 import Sudoku exposing (Action, Problem, execute, isOverConstrained, isSolved)
@@ -10,34 +9,18 @@ type alias Strategy =
     Problem -> Maybe Plan
 
 
-solve : Strategy
-solve =
-    solveWithFuel Infinite
+type alias Plan =
+    List ( Action, Int )
 
 
-solveWithFuel : Fuel -> Strategy
-solveWithFuel fuel problem =
+solve : (Plan -> Int) -> Strategy
+solve priority problem =
     let
-        priority : Plan -> Int
-        priority =
-            complexity
-
         queue =
             PriorityQueue.empty priority
                 |> PriorityQueue.insert seed
     in
-    firstSuggestionFromQueue fuel queue problem
-
-
-complexity : Plan -> Int
-complexity plan =
-    plan
-        |> List.map Tuple.second
-        |> List.foldl (*) 1
-
-
-type alias Plan =
-    List ( Action, Int )
+    firstSuggestionFromQueue queue problem
 
 
 seed : Plan
@@ -45,40 +28,35 @@ seed =
     []
 
 
-firstSuggestionFromQueue : Fuel -> PriorityQueue Plan -> Strategy
-firstSuggestionFromQueue fuel queue problem =
+firstSuggestionFromQueue : PriorityQueue Plan -> Strategy
+firstSuggestionFromQueue queue problem =
     let
-        plan =
+        candidatePlan =
             PriorityQueue.head queue
 
         remaining =
             PriorityQueue.tail queue
     in
-    plan
-        |> Maybe.andThen (firstSuggestionFromPlan fuel problem remaining)
+    case candidatePlan of
+        Just plan ->
+            case verdict problem plan of
+                Solved ->
+                    Just plan
 
+                Indeterminate followups ->
+                    let
+                        augmentedQueue =
+                            followups
+                            |> List.map (\followup -> plan ++ [ followup ])
+                            |> List.foldr PriorityQueue.insert remaining
+                    in
+                    firstSuggestionFromQueue augmentedQueue problem
 
-firstSuggestionFromPlan : Fuel -> Problem -> PriorityQueue Plan -> Plan -> Maybe Plan
-firstSuggestionFromPlan fuel problem queue plan =
-    case verdict problem plan of
-        Solved ->
-            Just plan
+                Unsolvable _ ->
+                    firstSuggestionFromQueue remaining problem
 
-        Indeterminate followups ->
-            let
-                augmentedQueue =
-                    followups
-                        |> List.map (\followup -> plan ++ [ followup ])
-                        |> List.foldr PriorityQueue.insert queue
-            in
-            consume fuel
-                |> Maybe.andThen
-                    (\f -> firstSuggestionFromQueue f augmentedQueue problem)
-
-        Unsolvable _ ->
-            consume fuel
-                |> Maybe.andThen
-                    (\f -> firstSuggestionFromQueue f queue problem)
+        Nothing ->
+            Nothing
 
 
 type Verdict
