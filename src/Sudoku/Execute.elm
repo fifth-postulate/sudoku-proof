@@ -168,9 +168,10 @@ viewComplexity plan =
 viewHistory : Plan -> Html msg
 viewHistory plan =
     plan
+        |> List.reverse
         |> List.map Tuple.first
         |> List.map viewAction
-        |> Html.ol [ Attribute.reversed True ]
+        |> Html.ol []
 
 
 viewAction : Action -> Html msg

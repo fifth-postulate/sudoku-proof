@@ -41,7 +41,8 @@ uncurry f ( a, b ) =
 
 
 type Msg
-    = SizeChanged Int
+    = Resetted
+    | SizeChanged Int
     | ClueAdded Cell Domain
     | ClueRemoved Cell
 
@@ -54,6 +55,9 @@ update msg model =
                 |> List.filter (\( c, _ ) -> not (c == target))
     in
     case msg of
+        Resetted ->
+            ( { model | clues = [] }, Cmd.none )
+
         SizeChanged m ->
             ( { model | m = m, clues = [] }, Cmd.none )
 
@@ -67,9 +71,23 @@ update msg model =
 view : Model -> Html Msg
 view model =
     Html.div []
-        [ viewSize model
+        [ viewControls model
         , viewClues model
+        , viewProgram model
         ]
+
+
+viewControls : Model -> Html Msg
+viewControls model =
+    Html.div [ Attribute.css [ displayFlex ] ]
+        [ viewReset
+        , viewSize model
+        ]
+
+
+viewReset : Html Msg
+viewReset =
+    Html.button [ Event.onClick Resetted ] [ Html.text "🗑" ]
 
 
 viewSize : Model -> Html Msg
@@ -79,9 +97,7 @@ viewSize model =
             targetValueIntParse
                 |> Decode.map SizeChanged
     in
-    Html.div []
-        [ Html.select [ Event.on "change" decoder ] <| List.map (viewSizeOption model) [ 4, 9 ]
-        ]
+    Html.select [ Event.on "change" decoder ] <| List.map (viewSizeOption model) [ 4, 9 ]
 
 
 viewSizeOption : Model -> Int -> Html Msg
@@ -199,3 +215,21 @@ viewOption cell current option =
 
         Nothing ->
             Html.option [ Attribute.value "", Attribute.selected <| current == Nothing ] [ Html.text "" ]
+
+
+viewProgram : Model -> Html msg
+viewProgram { m, clues } =
+    let
+        h =
+            Html.text <| "    emptySudoku " ++ String.fromInt m ++ "\n"
+
+        cs =
+            clues
+                |> List.reverse
+                |> List.map (\( cell, d ) -> ( String.fromInt cell, String.fromInt d ))
+                |> List.map (\( cell, d ) -> "        |> clue " ++ cell ++ " " ++ d ++ "\n")
+                |> List.map Html.text
+    in
+    Html.div []
+        [ Html.pre [] (h :: cs)
+        ]

@@ -45,10 +45,23 @@ firstSuggestionFromQueue queue problem =
 
                 Indeterminate followups ->
                     let
-                        augmentedQueue =
+                        cheap =
                             followups
-                                |> List.map (\followup -> plan ++ [ followup ])
-                                |> List.foldr PriorityQueue.insert remaining
+                                |> List.filter (Tuple.second >> (==) 1)
+
+                        costly =
+                            followups
+                                |> List.filter (Tuple.second >> (<) 1)
+
+                        augmentedQueue =
+                            case List.head cheap of
+                                Just a ->
+                                    PriorityQueue.insert (plan ++ [ a ]) remaining
+
+                                Nothing ->
+                                    costly
+                                        |> List.map (\followup -> plan ++ [ followup ])
+                                        |> List.foldr PriorityQueue.insert remaining
                     in
                     firstSuggestionFromQueue augmentedQueue problem
 
