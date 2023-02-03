@@ -3,7 +3,7 @@ module Visualizer exposing (..)
 import Browser
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Events as Event
-import Sudoku exposing (emptySudoku, clue)
+import Sudoku exposing (clue, emptySudoku)
 import Sudoku.Entry as Entry
 import Sudoku.Execute as Execute
 

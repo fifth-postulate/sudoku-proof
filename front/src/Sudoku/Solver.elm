@@ -79,9 +79,7 @@ type Verdict
 
 
 type Reason
-    = UnderConstrained
-    | OverConstrained
-    | LogicError String
+    = OverConstrained
 
 
 verdict : Problem -> Plan -> Verdict
