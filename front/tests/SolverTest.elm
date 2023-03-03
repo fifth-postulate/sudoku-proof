@@ -2,7 +2,8 @@ module SolverTest exposing (..)
 
 import Expect
 import Sudoku exposing (Problem, clue)
-import Sudoku.Solver as Solver exposing (Plan)
+import Sudoku.Solver exposing (Plan)
+import Sudoku.Solver.LeastComplexPlan exposing (strategy)
 import Test exposing (..)
 
 
@@ -80,7 +81,7 @@ solveTest description problem expected =
                         |> List.foldl (*) 1
 
                 suggestion =
-                    Solver.solve complexity problem
+                    strategy complexity problem
 
                 actual =
                     suggestion

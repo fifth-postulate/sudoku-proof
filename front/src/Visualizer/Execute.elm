@@ -6,8 +6,8 @@ import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
 import Sudoku exposing (Action, Problem)
-import Sudoku.Solver as Solver exposing (Plan)
-
+import Sudoku.Solver exposing (Plan)
+import Sudoku.Solver.LeastComplexPlan as Solver
 
 type Model
     = Unsolved Problem
@@ -45,7 +45,7 @@ update : Msg -> Model -> Model
 update message model =
     case ( message, model ) of
         ( Solve, Unsolved problem ) ->
-            Solver.solve complexity problem
+            Solver.strategy complexity problem
                 |> Maybe.map (\plan -> Solved problem { future = plan, history = [] })
                 |> Maybe.withDefault model
 
