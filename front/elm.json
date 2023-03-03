@@ -23,10 +23,11 @@
     },
     "test-dependencies": {
         "direct": {
-            "elm-explorations/test": "1.2.2"
+            "elm-explorations/test": "2.1.1",
+            "elm/random": "1.0.0"
         },
         "indirect": {
-            "elm/random": "1.0.0"
+            "elm/bytes": "1.0.8"
         }
     }
 }

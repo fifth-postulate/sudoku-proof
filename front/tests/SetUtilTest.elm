@@ -18,9 +18,9 @@ suite =
                             subject =
                                 Set.insert element base
                         in
-                        Expect.true "non empty" <| isJust (pick subject)
+                        Expect.equal True <| isJust (pick subject)
                 , test "of empty set is a Nothing" <|
-                    \_ -> Expect.false "empty" <| isJust (pick Set.empty)
+                    \_ -> Expect.equal False <| isJust (pick Set.empty)
                 ]
             ]
         ]
