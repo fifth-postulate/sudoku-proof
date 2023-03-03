@@ -199,7 +199,7 @@ viewClueOptions { m, clues } cell =
 
 
 viewOption : Cell -> Maybe Domain -> Maybe Domain -> Html Msg
-viewOption cell current option =
+viewOption _ current option =
     case option of
         Just value ->
             let

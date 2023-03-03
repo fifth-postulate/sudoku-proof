@@ -65,7 +65,7 @@ firstSuggestionFromQueue queue problem =
                     in
                     firstSuggestionFromQueue augmentedQueue problem
 
-                Unsolvable _ ->
+                Unsolvable ->
                     firstSuggestionFromQueue remaining problem
 
         Nothing ->
@@ -75,12 +75,7 @@ firstSuggestionFromQueue queue problem =
 type Verdict
     = Solved
     | Indeterminate (List ( Action, Int ))
-    | Unsolvable Reason
-
-
-type Reason
-    = OverConstrained
-
+    | Unsolvable
 
 verdict : Problem -> Plan -> Verdict
 verdict problem plan =
@@ -109,7 +104,7 @@ verdict problem plan =
         Solved
 
     else if isOverConstrained result then
-        Unsolvable OverConstrained
+        Unsolvable
 
     else
         indeterminate result

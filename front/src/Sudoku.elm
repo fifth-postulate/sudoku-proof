@@ -219,7 +219,7 @@ gridAutoRows size =
 
 
 viewCell : Int -> Problem -> Cell -> State -> Html msg
-viewCell m problem cell state =
+viewCell _ _ cell state =
     let
         content =
             case state of

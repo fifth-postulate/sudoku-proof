@@ -118,15 +118,15 @@ viewSolved info problem execution =
             , selector "span.plan-step > span:nth-child(n+2)::before" [ property "content" "\",\"" ]
             , selector "span.plan-step::after" [ property "content" "\"]\"" ]
             ]
-        , viewControls execution
+        , viewControls
         , viewFuture execution.future
         , Sudoku.view info current
         , viewHistory execution.history
         ]
 
 
-viewControls : Execution -> Html Msg
-viewControls { future, history } =
+viewControls : Html Msg
+viewControls _ =
     Html.div []
         [ Html.button [ Event.onClick Retreat ] [ Html.text "⊟" ]
         , Html.button [ Event.onClick Advance ] [ Html.text "⊞" ]
