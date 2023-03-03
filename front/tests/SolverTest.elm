@@ -2,7 +2,7 @@ module SolverTest exposing (..)
 
 import Expect
 import Sudoku exposing (Problem, clue)
-import Sudoku.Solver exposing (Plan)
+import Sudoku.Strategy exposing (Plan)
 import Sudoku.Solver.LeastComplexPlan exposing (strategy)
 import Test exposing (..)
 

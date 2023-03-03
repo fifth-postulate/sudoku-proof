@@ -1,4 +1,4 @@
-module Sudoku.Solver exposing (Plan, Strategy)
+module Sudoku.Strategy exposing (Plan, Strategy)
 
 import Sudoku exposing (Action, Problem)
 
