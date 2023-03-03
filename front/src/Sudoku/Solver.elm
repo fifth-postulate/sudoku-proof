@@ -77,6 +77,7 @@ type Verdict
     | Indeterminate (List ( Action, Int ))
     | Unsolvable
 
+
 verdict : Problem -> Plan -> Verdict
 verdict problem plan =
     let

@@ -6,11 +6,14 @@ import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
 import Json.Decode as Decode
-import Sudoku exposing (Cell, Domain, Problem, emptySudoku)
+import Sudoku exposing (Problem, emptySudoku)
+import Sudoku.Cell exposing (Cell)
+import Sudoku.Clue exposing (Clue)
+import Sudoku.Domain exposing (Domain)
 
 
 type alias Model =
-    { m : Int, clues : List ( Cell, Domain ) }
+    { m : Int, clues : List Clue }
 
 
 fromProblem : Int -> Problem -> Model
@@ -38,7 +41,7 @@ uncurry f ( a, b ) =
 type Msg
     = Resetted
     | SizeChanged Int
-    | ClueAdded Cell Domain
+    | ClueAdded Clue
     | ClueRemoved Cell
 
 
@@ -56,8 +59,8 @@ update msg model =
         SizeChanged m ->
             ( { model | m = m, clues = [] }, Cmd.none )
 
-        ClueAdded cell value ->
-            ( { model | clues = ( cell, value ) :: remove cell model.clues }, Cmd.none )
+        ClueAdded (( cell, _ ) as clue) ->
+            ( { model | clues = clue :: remove cell model.clues }, Cmd.none )
 
         ClueRemoved cell ->
             ( { model | clues = remove cell model.clues }, Cmd.none )
@@ -192,7 +195,7 @@ viewClueOptions { m, clues } cell =
 
         toMsg value =
             value
-                |> Maybe.map (ClueAdded cell)
+                |> Maybe.map (Tuple.pair cell >> ClueAdded)
                 |> Maybe.withDefault (ClueRemoved cell)
     in
     Html.select [ Attribute.id id, Event.on "change" decoder ] options
@@ -221,7 +224,7 @@ viewProgram { m, clues } =
         cs =
             clues
                 |> List.reverse
-                |> List.map (\( cell, d ) -> ( String.fromInt cell, String.fromInt d ))
+                |> List.map (Tuple.mapBoth String.fromInt String.fromInt)
                 |> List.map (\( cell, d ) -> "        |> clue " ++ cell ++ " " ++ d ++ "\n")
                 |> List.map Html.text
     in

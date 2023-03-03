@@ -1,25 +1,26 @@
-module Sudoku.Blocks exposing (sudokuBlocks)
+module Sudoku.Blocks exposing (Block, sudokuBlocks)
 
 import List.Util exposing (cartesianProduct)
 import Set exposing (Set)
+import Sudoku.Cell exposing (Cell)
 
 
-type alias Cell =
-    Int
+type alias Block =
+    Set Cell
 
 
-sudokuBlocks : Int -> List (Set Cell)
+sudokuBlocks : Int -> List Block
 sudokuBlocks m =
     sudokuRows m ++ sudokuColumns m ++ sudokuSquares m
 
 
-sudokuRows : Int -> List (Set Cell)
+sudokuRows : Int -> List Block
 sudokuRows m =
     List.range 0 (m - 1)
         |> List.map (sudokuRow m)
 
 
-sudokuRow : Int -> Int -> Set Cell
+sudokuRow : Int -> Int -> Block
 sudokuRow m index =
     let
         row =
@@ -30,13 +31,13 @@ sudokuRow m index =
         |> Set.fromList
 
 
-sudokuColumns : Int -> List (Set Cell)
+sudokuColumns : Int -> List Block
 sudokuColumns m =
     List.range 0 (m - 1)
         |> List.map (sudokuColumn m)
 
 
-sudokuColumn : Int -> Int -> Set Cell
+sudokuColumn : Int -> Int -> Block
 sudokuColumn m index =
     List.range 0 (m - 1)
         |> List.map ((*) m)
@@ -44,7 +45,7 @@ sudokuColumn m index =
         |> Set.fromList
 
 
-sudokuSquares : Int -> List (Set Cell)
+sudokuSquares : Int -> List Block
 sudokuSquares n =
     let
         m =
@@ -63,7 +64,7 @@ sudokuSquares n =
         |> List.map block
 
 
-square : Int -> Set Cell
+square : Int -> Block
 square m =
     let
         n =

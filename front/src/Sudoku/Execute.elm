@@ -126,7 +126,7 @@ viewSolved info problem execution =
 
 
 viewControls : Html Msg
-viewControls _ =
+viewControls =
     Html.div []
         [ Html.button [ Event.onClick Retreat ] [ Html.text "⊟" ]
         , Html.button [ Event.onClick Advance ] [ Html.text "⊞" ]
@@ -150,7 +150,7 @@ viewStep : ( Action, Int ) -> Html msg
 viewStep ( action, c ) =
     let
         ( cell, d ) =
-            Sudoku.toClue action
+            Sudoku.clueFrom action
     in
     Html.span []
         [ Html.span [] [ Html.text <| String.fromInt cell ]

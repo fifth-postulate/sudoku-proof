@@ -1,4 +1,4 @@
-module Sudoku exposing (Action, Cell, Domain, Info, Problem, clue, emptySudoku, execute, fill, isOverConstrained, isSolved, options, toClue, toClues, view, viewAction)
+module Sudoku exposing (Action, Info, Problem, clue, clueFrom, emptySudoku, execute, fill, isOverConstrained, isSolved, options, toClues, view, viewAction)
 
 import Array exposing (Array)
 import Array.Util as Util
@@ -6,7 +6,10 @@ import Css exposing (..)
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Set exposing (Set)
-import Sudoku.Blocks as Blocks
+import Sudoku.Blocks as Blocks exposing (Block)
+import Sudoku.Cell exposing (Cell)
+import Sudoku.Clue exposing (Clue)
+import Sudoku.Domain exposing (Domain)
 
 
 type Problem
@@ -18,18 +21,6 @@ type State
     | Options (Set Domain)
 
 
-type alias Domain =
-    Int
-
-
-type alias Block =
-    Set Cell
-
-
-type alias Cell =
-    Int
-
-
 isSolved : Problem -> Bool
 isSolved (Problem { states }) =
     Util.all isDetermined states
@@ -37,7 +28,11 @@ isSolved (Problem { states }) =
 
 isOverConstrained : Problem -> Bool
 isOverConstrained (Problem { states }) =
-    Util.any (\c -> (not <| isDetermined c) && (Set.isEmpty <| candidates c)) states
+    let
+        overConstrained c =
+            (not <| isDetermined c) && (Set.isEmpty <| candidates c)
+    in
+    Util.any overConstrained states
 
 
 isDetermined : State -> Bool
@@ -56,14 +51,14 @@ candidates state =
         Determined _ ->
             Set.empty
 
-        Options domain ->
-            domain
+        Options cs ->
+            cs
 
 
-toClues : Problem -> List ( Cell, Domain )
+toClues : Problem -> List Clue
 toClues (Problem { states }) =
     let
-        toValue state =
+        toClue state =
             case state of
                 Determined v ->
                     v
@@ -71,15 +66,11 @@ toClues (Problem { states }) =
                 Options _ ->
                     -- This option is impossible
                     0
-
-        lift : (State -> a) -> ( Cell, State ) -> ( Cell, a )
-        lift f ( cell, state ) =
-            ( cell, f state )
     in
     states
         |> Array.indexedMap (\cell state -> ( cell, state ))
         |> Array.filter (Tuple.second >> isDetermined)
-        |> Array.map (lift toValue)
+        |> Array.map (Tuple.mapSecond toClue)
         |> Array.toList
 
 
@@ -118,8 +109,8 @@ type Action
     = Fill Cell Domain
 
 
-toClue : Action -> ( Cell, Domain )
-toClue (Fill cell domain) =
+clueFrom : Action -> Clue
+clueFrom (Fill cell domain) =
     ( cell, domain )
 
 
