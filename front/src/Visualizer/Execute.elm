@@ -1,4 +1,4 @@
-module Sudoku.Execute exposing (Model, Msg, empty, toProblem, update, view)
+module Visualizer.Execute exposing (Model, Msg, empty, toProblem, update, view)
 
 import Css exposing (..)
 import Css.Global exposing (global, selector)

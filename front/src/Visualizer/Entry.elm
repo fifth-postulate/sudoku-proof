@@ -1,4 +1,4 @@
-module Sudoku.Entry exposing (Model, Msg, fromProblem, toProblem, update, view)
+module Visualizer.Entry exposing (Model, Msg, fromProblem, toProblem, update, view)
 
 import Css exposing (..)
 import Html.Events.Extra exposing (targetValueIntParse, targetValueMaybeInt)
@@ -223,7 +223,6 @@ viewProgram { m, clues } =
 
         cs =
             clues
-                |> List.reverse
                 |> List.map (Tuple.mapBoth String.fromInt String.fromInt)
                 |> List.map (\( cell, d ) -> "        |> clue " ++ cell ++ " " ++ d ++ "\n")
                 |> List.map Html.text
