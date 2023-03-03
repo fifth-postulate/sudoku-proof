@@ -1,9 +1,10 @@
 module Sudoku.Solver.LeastComplexPlan exposing (strategy)
 
 import PriorityQueue exposing (PriorityQueue)
+import Set
 import Sudoku exposing (Action, Problem, execute, isOverConstrained, isSolved)
 import Sudoku.Strategy exposing (Plan, Strategy)
-import Set
+
 
 strategy : (Plan -> Int) -> Strategy
 strategy priority problem =
