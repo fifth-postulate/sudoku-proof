@@ -77,8 +77,10 @@ toClues (Problem { states }) =
 options : Problem -> List ( Cell, Set Domain )
 options (Problem { states }) =
     states
-        |> Array.indexedMap (\cell state -> ( cell, candidates state ))
+        |> Array.indexedMap Tuple.pair
+        |> Array.map (Tuple.mapSecond candidates)
         |> Array.toList
+        |> List.filter (Tuple.second >> Set.isEmpty >> not)
 
 
 emptySudoku : Int -> Problem
