@@ -1,4 +1,4 @@
-module Sudoku.Solver.LeastComplexPlan exposing (strategy)
+module Sudoku.Strategy.LeastComplexPlan exposing (strategy)
 
 import PriorityQueue exposing (PriorityQueue)
 import Set

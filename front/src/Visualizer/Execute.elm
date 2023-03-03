@@ -6,8 +6,8 @@ import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
 import Sudoku exposing (Action, Problem)
-import Sudoku.Solver.LeastComplexPlan as Solver
 import Sudoku.Strategy exposing (Plan)
+import Sudoku.Strategy.LeastComplexPlan as Solver
 
 
 type Model

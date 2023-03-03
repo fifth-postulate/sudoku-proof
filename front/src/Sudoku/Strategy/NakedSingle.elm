@@ -1,4 +1,4 @@
-module Sudoku.Solver.NakedSingle exposing (strategy)
+module Sudoku.Strategy.NakedSingle exposing (strategy)
 
 import Set exposing (Set)
 import Sudoku
