@@ -6,6 +6,7 @@ import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
 import Json.Decode as Decode
+import Set
 import Sudoku exposing (Problem, emptySudoku)
 import Sudoku.Cell exposing (Cell)
 import Sudoku.Clue exposing (Clue)
@@ -106,9 +107,12 @@ viewSizeOption { m } n =
 viewClues : Model -> Html Msg
 viewClues ({ m } as model) =
     let
+        problem =
+            toProblem model
+
         clues =
             List.range 0 (m * m - 1)
-                |> List.map (viewClue model)
+                |> List.map (viewClue model problem)
     in
     Html.div
         [ Attribute.css
@@ -135,8 +139,8 @@ gridAutoRows size =
     property "grid-auto-rows" size
 
 
-viewClue : Model -> Int -> Html Msg
-viewClue model index =
+viewClue : Model -> Problem -> Cell -> Html Msg
+viewClue model problem cell =
     let
         gray =
             rgb 192 192 192
@@ -163,8 +167,9 @@ viewClue model index =
                 , top (px 2)
                 ]
             ]
-            [ Html.text <| String.fromInt index ]
-        , viewClueOptions model index
+            [ Html.text <| String.fromInt cell ]
+        , viewClueOptions model cell
+        , viewCandidates problem cell
         ]
 
 
@@ -213,6 +218,30 @@ viewOption _ current option =
 
         Nothing ->
             Html.option [ Attribute.value "", Attribute.selected <| current == Nothing ] [ Html.text "" ]
+
+
+viewCandidates : Problem -> Cell -> Html Msg
+viewCandidates problem cell =
+    let
+        gray =
+            rgb 192 192 192
+
+        content =
+            Sudoku.candidatesAt cell problem
+                |> Set.toList
+                |> List.map String.fromInt
+                |> String.join ","
+    in
+    Html.span
+        [ Attribute.css
+            [ Css.color gray
+            , fontSize xxSmall
+            , position absolute
+            , bottom (px 2)
+            , right (px 2)
+            ]
+        ]
+        [ Html.text content ]
 
 
 viewProgram : Model -> Html msg

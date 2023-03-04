@@ -1,4 +1,4 @@
-module Sudoku exposing (Action, Info, Problem, clue, clueFrom, emptySudoku, execute, fill, isOverConstrained, isSolved, options, toClues, view, viewAction)
+module Sudoku exposing (Action, Info, Problem, candidatesAt, clue, clueFrom, emptySudoku, execute, fill, isOverConstrained, isSolved, options, toClues, view, viewAction)
 
 import Array exposing (Array)
 import Array.Util as Util
@@ -53,6 +53,14 @@ candidates state =
 
         Options cs ->
             cs
+
+
+candidatesAt : Cell -> Problem -> Set Domain
+candidatesAt cell (Problem { states }) =
+    states
+        |> Array.get cell
+        |> Maybe.map candidates
+        |> Maybe.withDefault Set.empty
 
 
 toClues : Problem -> List Clue
