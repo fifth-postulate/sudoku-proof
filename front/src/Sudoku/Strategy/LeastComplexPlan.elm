@@ -51,9 +51,9 @@ firstSuggestionFromQueue queue problem =
                                 PriorityQueue.insert (plan ++ cheap) remaining
 
                             else
-                                    costly
-                                        |> List.map (List.singleton >> List.append plan)
-                                        |> List.foldr PriorityQueue.insert remaining
+                                costly
+                                    |> List.map (List.singleton >> List.append plan)
+                                    |> List.foldr PriorityQueue.insert remaining
                     in
                     firstSuggestionFromQueue augmentedQueue problem
 

@@ -1,4 +1,4 @@
-module Sudoku exposing (Action, Info, Problem, candidatesAt, clue, clueFrom, emptySudoku, execute, fill, isOverConstrained, isSolved, options, toClues, view, viewAction)
+module Sudoku exposing (Action, Info, Problem, candidatesAt, clue, clueFrom, emptySudoku, execute, fill, incidentBlocks, isOverConstrained, isSolved, options, toClues, view, viewAction)
 
 import Array exposing (Array)
 import Array.Util as Util
@@ -89,6 +89,11 @@ options (Problem { states }) =
         |> Array.map (Tuple.mapSecond candidates)
         |> Array.toList
         |> List.filter (Tuple.second >> Set.isEmpty >> not)
+
+
+incidentBlocks : Problem -> Cell -> List Block
+incidentBlocks (Problem { blocks }) cell =
+    List.filter (Set.member cell) blocks
 
 
 emptySudoku : Int -> Problem

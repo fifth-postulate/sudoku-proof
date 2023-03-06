@@ -7,6 +7,10 @@ type alias Strategy =
     Problem -> Maybe Plan
 
 
+
+-- abstract to plan with info
+
+
 type alias Plan =
     List ( Action, Int )
 

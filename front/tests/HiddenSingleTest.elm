@@ -1,9 +1,9 @@
-module NakedSingleTest exposing (..)
+module HiddenSingleTest exposing (..)
 
 import Expect
 import Sudoku exposing (Problem, clue)
 import Sudoku.Strategy exposing (Plan)
-import Sudoku.Strategy.NakedSingle exposing (strategy)
+import Sudoku.Strategy.HiddenSingle exposing (strategy)
 import Test exposing (..)
 
 
@@ -11,20 +11,18 @@ suite : Test
 suite =
     describe "Sudoku"
         [ describe "Strategy"
-            [ describe "NakedSingle"
+            [ describe "HiddenSingle"
                 [ let
                     problem =
                         Sudoku.emptySudoku 4
                             |> clue 0 1
-                            |> clue 1 2
-                            |> clue 2 3
+                            |> clue 6 2
 
                     expected =
                         Sudoku.emptySudoku 4
                             |> clue 0 1
+                            |> clue 6 2
                             |> clue 1 2
-                            |> clue 2 3
-                            |> clue 3 4
                             |> Just
                   in
                   solveTest "forced" problem expected
