@@ -19,7 +19,7 @@ strategy problem =
                 |> List.filter (Tuple.second >> isNakedSingle)
                 |> List.concatMap toPlan
     in
-    if List.isEmpty nakedSingles then
+    if not <| List.isEmpty nakedSingles then
         Just nakedSingles
 
     else
