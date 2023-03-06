@@ -47,13 +47,12 @@ firstSuggestionFromQueue queue problem =
                                 |> List.filter (Tuple.second >> (<) 1)
 
                         augmentedQueue =
-                            case List.head cheap of
-                                Just a ->
-                                    PriorityQueue.insert (plan ++ [ a ]) remaining
+                            if not <| List.isEmpty cheap then
+                                PriorityQueue.insert (plan ++ cheap) remaining
 
-                                Nothing ->
+                            else
                                     costly
-                                        |> List.map (\followup -> plan ++ [ followup ])
+                                        |> List.map (List.singleton >> List.append plan)
                                         |> List.foldr PriorityQueue.insert remaining
                     in
                     firstSuggestionFromQueue augmentedQueue problem
@@ -89,7 +88,6 @@ verdict problem plan =
                 followups =
                     aProblem
                         |> Sudoku.options
-                        |> List.filter (\( _, options ) -> 0 < Set.size options)
                         |> List.concatMap toAction
             in
             Indeterminate followups
