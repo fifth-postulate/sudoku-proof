@@ -20,9 +20,9 @@ suite =
                                     fill 0 1
 
                                 strategy =
-                                    either [ never, never, always ( action, 1 ) ]
+                                    either [ never, never, always action ]
                             in
-                            Expect.equal (Just [ ( action, 1 ) ]) <| perform strategy
+                            Expect.equal (Just [ action ]) <| perform strategy
                     ]
                 ]
             ]
@@ -34,7 +34,7 @@ never _ =
     Nothing
 
 
-always : ( Action, Int ) -> Strategy
+always : Action -> Strategy
 always t _ =
     Just [ t ]
 

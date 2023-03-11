@@ -42,7 +42,6 @@ solveTest description problem expected =
                 actual =
                     suggestion
                         |> Maybe.andThen List.head
-                        |> Maybe.map Tuple.first
                         |> Maybe.map (\action -> Sudoku.execute action problem)
             in
             Expect.equal expected actual

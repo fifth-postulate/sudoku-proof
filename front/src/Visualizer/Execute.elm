@@ -5,7 +5,8 @@ import Css.Global exposing (global, selector)
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
-import Sudoku exposing (Action, Problem)
+import Set
+import Sudoku exposing (Action(..), Problem)
 import Sudoku.Strategy exposing (Plan)
 import Sudoku.Strategy.LeastComplexPlan as Solver
 
@@ -32,7 +33,6 @@ toProblem model =
 
         Solved problem { history } ->
             history
-                |> List.map Tuple.first
                 |> List.foldr Sudoku.execute problem
 
 
@@ -46,7 +46,7 @@ update : Msg -> Model -> Model
 update message model =
     case ( message, model ) of
         ( Solve, Unsolved problem ) ->
-            Solver.strategy complexity problem
+            Solver.strategy (complexity problem) problem
                 |> Maybe.map (\plan -> Solved problem { future = plan, history = [] })
                 |> Maybe.withDefault model
 
@@ -60,11 +60,21 @@ update message model =
             model
 
 
-complexity : Plan -> Int
-complexity plan =
-    plan
-        |> List.map Tuple.second
-        |> List.foldl (*) 1
+complexity : Problem -> Plan -> Int
+complexity problem plan =
+    case plan of
+        [] ->
+            1
+
+        p :: ps ->
+            case p of
+                Fill c _ ->
+                    let
+                        cost =
+                            Sudoku.candidatesAt c problem
+                                |> Set.size
+                    in
+                    cost * complexity (Sudoku.execute p problem) ps
 
 
 advance : Execution -> Execution
@@ -110,7 +120,6 @@ viewSolved info problem execution =
     let
         current =
             execution.history
-                |> List.map Tuple.first
                 |> List.foldr Sudoku.execute problem
     in
     Html.div []
@@ -120,7 +129,7 @@ viewSolved info problem execution =
             , selector "span.plan-step::after" [ property "content" "\"]\"" ]
             ]
         , viewControls
-        , viewFuture execution.future
+        , viewFuture current execution.future
         , Sudoku.view info current
         , viewHistory execution.history
         ]
@@ -134,21 +143,21 @@ viewControls =
         ]
 
 
-viewFuture : Plan -> Html msg
-viewFuture plan =
+viewFuture : Problem -> Plan -> Html msg
+viewFuture problem plan =
     let
         content =
             plan
                 |> List.map viewStep
     in
     Html.div []
-        [ viewComplexity plan
+        [ viewComplexity problem plan
         , Html.span [ Attribute.classList [ ( "plan-step", True ) ] ] content
         ]
 
 
-viewStep : ( Action, Int ) -> Html msg
-viewStep ( action, c ) =
+viewStep : Action -> Html msg
+viewStep action =
     let
         ( cell, d ) =
             Sudoku.clueFrom action
@@ -156,21 +165,19 @@ viewStep ( action, c ) =
     Html.span []
         [ Html.span [] [ Html.text <| String.fromInt cell ]
         , Html.span [] [ Html.text "↦" ]
-        , Html.sub [] [ Html.text <| String.fromInt c ]
         , Html.span [] [ Html.text <| String.fromInt d ]
         ]
 
 
-viewComplexity : Plan -> Html msg
-viewComplexity plan =
-    Html.span [] [ Html.text <| String.fromInt <| complexity plan ]
+viewComplexity : Problem -> Plan -> Html msg
+viewComplexity problem plan =
+    Html.span [] [ Html.text <| String.fromInt <| complexity problem plan ]
 
 
 viewHistory : Plan -> Html msg
 viewHistory plan =
     plan
         |> List.reverse
-        |> List.map Tuple.first
         |> List.map viewAction
         |> Html.ol []
 

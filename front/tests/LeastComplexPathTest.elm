@@ -64,9 +64,7 @@ solveTest description problem expected =
             let
                 complexity : Plan -> Int
                 complexity plan =
-                    plan
-                        |> List.map Tuple.second
-                        |> List.foldl (*) 1
+                    List.length plan
 
                 suggestion =
                     strategy complexity problem
@@ -74,7 +72,6 @@ solveTest description problem expected =
                 actual =
                     suggestion
                         |> Maybe.andThen List.head
-                        |> Maybe.map Tuple.first
                         |> Maybe.map (\action -> Sudoku.execute action problem)
             in
             Expect.equal expected actual

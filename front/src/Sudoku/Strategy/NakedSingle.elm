@@ -30,7 +30,7 @@ toPlan : ( Cell, Set Domain ) -> Plan
 toPlan ( cell, options ) =
     let
         toAction option =
-            ( Sudoku.fill cell option, Set.size options )
+            Sudoku.fill cell option
     in
     options
         |> Set.toList

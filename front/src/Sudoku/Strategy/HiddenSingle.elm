@@ -51,7 +51,7 @@ hiddenOptions problem cell block =
     Set.diff candidates others
 
 
-toAction : ( Cell, Set Domain ) -> ( Action, Int )
+toAction : ( Cell, Set Domain ) -> Action
 toAction ( cell, options ) =
     let
         d =
@@ -61,4 +61,4 @@ toAction ( cell, options ) =
                 -- Never occurs
                 |> Maybe.withDefault -1
     in
-    ( Sudoku.fill cell d, 1 )
+    Sudoku.fill cell d

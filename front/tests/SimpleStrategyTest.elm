@@ -2,10 +2,10 @@ module SimpleStrategyTest exposing (..)
 
 import Expect
 import Sudoku exposing (Problem, clue)
-import Sudoku.Strategy as Strategy exposing (Strategy, Plan)
+import Sudoku.Strategy as Strategy exposing (Plan, Strategy)
+import Sudoku.Strategy.Combinator exposing (either, repeated)
 import Sudoku.Strategy.HiddenSingle as HiddenSingle
 import Sudoku.Strategy.NakedSingle as NakesSingle
-import Sudoku.Strategy.Combinator exposing (either, repeated)
 import Test exposing (..)
 
 
@@ -36,7 +36,8 @@ suite =
 
 strategy : Strategy
 strategy =
-    repeated <| either [NakesSingle.strategy, HiddenSingle.strategy]
+    repeated <| either [ NakesSingle.strategy, HiddenSingle.strategy ]
+
 
 solveTest : String -> Problem -> Maybe Problem -> Test
 solveTest description problem expected =

@@ -41,10 +41,12 @@ firstSuggestionFromQueue queue problem =
                         cheap =
                             followups
                                 |> List.filter (Tuple.second >> (==) 1)
+                                |> List.map Tuple.first
 
                         costly =
                             followups
                                 |> List.filter (Tuple.second >> (<) 1)
+                                |> List.map Tuple.first
 
                         augmentedQueue =
                             if not <| List.isEmpty cheap then
@@ -75,7 +77,6 @@ verdict problem plan =
     let
         result =
             plan
-                |> List.map Tuple.first
                 |> List.foldl execute problem
 
         indeterminate aProblem =

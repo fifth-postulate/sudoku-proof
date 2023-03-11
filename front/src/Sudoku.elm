@@ -1,4 +1,4 @@
-module Sudoku exposing (Action, Info, Problem, candidatesAt, clue, clueFrom, emptySudoku, execute, fill, incidentBlocks, isOverConstrained, isSolved, options, toClues, view, viewAction)
+module Sudoku exposing (Action(..), Info, Problem, candidatesAt, clue, clueFrom, emptySudoku, execute, fill, incidentBlocks, isOverConstrained, isSolved, options, toClues, view, viewAction)
 
 import Array exposing (Array)
 import Array.Util as Util
