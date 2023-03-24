@@ -5,7 +5,7 @@ import Html.Styled as Html exposing (Html)
 import Html.Styled.Events as Event
 import Sudoku exposing (clue, emptySudoku)
 import Visualizer.Entry as Entry
-import Visualizer.Execute as Execute
+import Visualizer.ExecuteLeastComplexPlan as Execute
 
 
 main : Program {} Model Msg
