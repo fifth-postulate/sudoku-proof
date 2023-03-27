@@ -2,6 +2,7 @@ module Visualizer exposing (..)
 
 import Browser
 import Html.Styled as Html exposing (Html)
+import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
 import Sudoku exposing (clue, emptySudoku)
 import Visualizer.Entry as Entry
@@ -19,8 +20,13 @@ main =
 
 
 type Model
-    = Prepare Entry.Model
-    | Play Info Execute.Model
+    = Prepare StrategyPicked Entry.Model
+    | PlayLeastComplexPath StrategyPicked Info Execute.Model
+
+
+type StrategyPicked
+    = LeastComplexPath
+    | Tree
 
 
 type alias Info =
@@ -62,27 +68,32 @@ init _ =
                 |> clue 5 9
                 |> clue 1 5
     in
-    ( Prepare <| Entry.fromProblem m problem, Cmd.none )
+    ( Prepare LeastComplexPath <| Entry.fromProblem m problem, Cmd.none )
 
 
 type Msg
     = PrepareMsg Entry.Msg
-    | PlayMsg Execute.Msg
+    | LeastComplexPathMsg Execute.Msg
+    | PickStrategy StrategyPicked
     | GoPlay
     | Stop
+    | Noop
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update message model =
     case ( message, model ) of
-        ( PrepareMsg msg, Prepare mdl ) ->
+        ( PrepareMsg msg, Prepare s mdl ) ->
             let
                 ( m, cmd ) =
                     Entry.update msg mdl
             in
-            ( Prepare m, Cmd.map PrepareMsg cmd )
+            ( Prepare s m, Cmd.map PrepareMsg cmd )
 
-        ( GoPlay, Prepare mdl ) ->
+        ( PickStrategy t, Prepare _ mdl ) ->
+            ( Prepare t mdl, Cmd.none )
+
+        ( GoPlay, Prepare s mdl ) ->
             let
                 info =
                     { m = mdl.m }
@@ -92,21 +103,21 @@ update message model =
                         |> Entry.toProblem
                         |> Execute.empty
             in
-            ( Play info m, Cmd.none )
+            ( PlayLeastComplexPath s info m, Cmd.none )
 
-        ( PlayMsg msg, Play info mdl ) ->
+        ( LeastComplexPathMsg msg, PlayLeastComplexPath s info mdl ) ->
             let
                 m =
                     Execute.update msg mdl
             in
-            ( Play info m, Cmd.none )
+            ( PlayLeastComplexPath s info m, Cmd.none )
 
-        ( Stop, Play info mdl ) ->
+        ( Stop, PlayLeastComplexPath s info mdl ) ->
             let
                 problem =
                     Execute.toProblem mdl
             in
-            ( Prepare <| Entry.fromProblem info.m problem, Cmd.none )
+            ( Prepare s <| Entry.fromProblem info.m problem, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -125,10 +136,27 @@ viewControl model =
     let
         content =
             case model of
-                Prepare _ ->
-                    [ Html.button [ Event.onClick GoPlay ] [ Html.text "▶️" ] ]
+                Prepare s _ ->
+                    [ Html.input
+                        [ Attribute.id "strategy:leastcomplexpath"
+                        , Attribute.type_ "radio"
+                        , Attribute.checked <| s == LeastComplexPath
+                        , Event.onCheck <| \_ -> PickStrategy LeastComplexPath
+                        ]
+                        []
+                    , Html.label [ Attribute.for "strategy:leastcomplexpath" ] [ Html.text "L" ]
+                    , Html.input
+                        [ Attribute.id "strategy:tree"
+                        , Attribute.type_ "radio"
+                        , Attribute.checked <| s == Tree
+                        , Event.onCheck <| \_ -> PickStrategy Tree
+                        ]
+                        []
+                    , Html.label [ Attribute.for "strategy:tree" ] [ Html.text "T" ]
+                    , Html.button [ Event.onClick GoPlay ] [ Html.text "▶️" ]
+                    ]
 
-                Play _ _ ->
+                PlayLeastComplexPath _ _ _ ->
                     [ Html.button [ Event.onClick Stop ] [ Html.text "⏹️" ] ]
     in
     Html.div [] content
@@ -137,11 +165,11 @@ viewControl model =
 viewContent : Model -> Html Msg
 viewContent model =
     case model of
-        Prepare mdl ->
+        Prepare _ mdl ->
             Html.map PrepareMsg <| Entry.view mdl
 
-        Play info mdl ->
-            Html.map PlayMsg <| Execute.view info mdl
+        PlayLeastComplexPath _ info mdl ->
+            Html.map LeastComplexPathMsg <| Execute.view info mdl
 
 
 subscriptions : Model -> Sub Msg
