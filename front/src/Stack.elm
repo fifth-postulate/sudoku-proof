@@ -1,4 +1,4 @@
-module Stack exposing (Stack, empty, peek, pop, push)
+module Stack exposing (Stack, empty, peek, pop, push, view)
 
 import Html.Styled as Html exposing (Html)
 

@@ -9,6 +9,7 @@ import Visualizer.Entry as Entry
 import Visualizer.ExecuteLeastComplexPlan as Execute
 import Visualizer.Tree as Tree
 
+
 main : Program {} Model Msg
 main =
     Browser.element
@@ -22,7 +23,7 @@ main =
 type Model
     = Prepare StrategyPicked Entry.Model
     | PlayLeastComplexPath StrategyPicked Info Execute.Model
-    | PlayTreePath StrategyPicked Tree.Model
+    | PlayTreePath StrategyPicked Info Tree.Model
 
 
 type StrategyPicked
@@ -69,12 +70,13 @@ init _ =
                 |> clue 5 9
                 |> clue 1 5
     in
-    ( Prepare LeastComplexPath <| Entry.fromProblem m problem, Cmd.none )
+    ( Prepare Tree <| Entry.fromProblem m problem, Cmd.none )
 
 
 type Msg
     = PrepareMsg Entry.Msg
     | LeastComplexPathMsg Execute.Msg
+    | TreeMsg Tree.Msg
     | PickStrategy StrategyPicked
     | GoPlay
     | Stop
@@ -98,13 +100,25 @@ update message model =
             let
                 info =
                     { m = mdl.m }
-
-                m =
-                    mdl
-                        |> Entry.toProblem
-                        |> Execute.empty
             in
-            ( PlayLeastComplexPath s info m, Cmd.none )
+            case s of
+                LeastComplexPath ->
+                    let
+                        m =
+                            mdl
+                                |> Entry.toProblem
+                                |> Execute.empty
+                    in
+                    ( PlayLeastComplexPath s info m, Cmd.none )
+
+                Tree ->
+                    let
+                        m =
+                            mdl
+                                |> Entry.toProblem
+                                |> Tree.fromProblem info
+                    in
+                    ( PlayTreePath s info m, Cmd.none )
 
         ( LeastComplexPathMsg msg, PlayLeastComplexPath s info mdl ) ->
             let
@@ -112,6 +126,13 @@ update message model =
                     Execute.update msg mdl
             in
             ( PlayLeastComplexPath s info m, Cmd.none )
+
+        ( TreeMsg msg, PlayTreePath s info mdl ) ->
+            let
+                ( m, cmd ) =
+                    Tree.update msg mdl
+            in
+            ( PlayTreePath s info m, Cmd.map TreeMsg cmd )
 
         ( Stop, PlayLeastComplexPath s info mdl ) ->
             let
@@ -157,7 +178,7 @@ viewControl model =
                     , Html.button [ Event.onClick GoPlay ] [ Html.text "▶️" ]
                     ]
 
-                PlayLeastComplexPath _ _ _ ->
+                _ ->
                     [ Html.button [ Event.onClick Stop ] [ Html.text "⏹️" ] ]
     in
     Html.div [] content
@@ -171,6 +192,9 @@ viewContent model =
 
         PlayLeastComplexPath _ info mdl ->
             Html.map LeastComplexPathMsg <| Execute.view info mdl
+
+        PlayTreePath _ info mdl ->
+            Html.map TreeMsg <| Tree.view mdl
 
 
 subscriptions : Model -> Sub Msg

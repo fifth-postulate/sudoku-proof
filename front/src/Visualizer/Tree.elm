@@ -1,4 +1,4 @@
-module Visualizer.Tree exposing (Model)
+module Visualizer.Tree exposing (Model, Msg, fromProblem, update, view)
 
 import Html.Styled as Html exposing (Html)
 import Stack exposing (Stack)
@@ -17,7 +17,7 @@ fromProblem : Sudoku.Info -> Problem -> Model
 fromProblem info problem =
     Model
         { info = info
-        , stack = Stack.empty |> Stack.push (frame problem)
+        , stack = Stack.empty |> Stack.push (frameFrom problem)
         , statistics = { nodesExplored = 1 }
         }
 
@@ -31,8 +31,8 @@ type alias Frame =
     { problem : Problem }
 
 
-frame : Problem -> Frame
-frame problem =
+frameFrom : Problem -> Frame
+frameFrom problem =
     { problem = problem }
 
 
@@ -66,12 +66,12 @@ view (Model model) =
 viewStatistics : Statistics -> Html Msg
 viewStatistics statistics =
     Html.div []
-        [ Html.span [] [ Html.text "#nodes: " ++ String.fromInt statistics.nodesExplored ]
+        [ Html.span [] [ Html.text <| "#nodes: " ++ String.fromInt statistics.nodesExplored ]
         ]
 
 
 viewFrame : Frame -> Html Msg
 viewFrame frame =
     Html.div []
-        [ Htmt.text "exploring frame"
+        [ Html.text "exploring frame"
         ]
