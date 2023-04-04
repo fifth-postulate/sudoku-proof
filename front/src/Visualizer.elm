@@ -7,7 +7,7 @@ import Html.Styled.Events as Event
 import Sudoku exposing (clue, emptySudoku)
 import Visualizer.Entry as Entry
 import Visualizer.ExecuteLeastComplexPlan as Execute
-
+import Visualizer.Tree as Tree
 
 main : Program {} Model Msg
 main =
@@ -22,6 +22,7 @@ main =
 type Model
     = Prepare StrategyPicked Entry.Model
     | PlayLeastComplexPath StrategyPicked Info Execute.Model
+    | PlayTreePath StrategyPicked Tree.Model
 
 
 type StrategyPicked
