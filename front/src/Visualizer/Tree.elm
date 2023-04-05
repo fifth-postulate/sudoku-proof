@@ -1,4 +1,4 @@
-module Visualizer.Tree exposing (Model, Msg, fromProblem, update, view)
+module Visualizer.Tree exposing (Model, Msg, fromProblem, toProblem, update, view)
 
 import Css exposing (..)
 import Html.Styled as Html exposing (Html)
@@ -26,6 +26,14 @@ fromProblem info problem =
         , stack = Stack.empty |> Stack.push (frameFrom problem)
         , statistics = { nodesExplored = 1 }
         }
+
+
+toProblem : Model -> Problem
+toProblem (Model model) =
+    model.stack
+        |> Stack.peek
+        |> Maybe.map .problem
+        |> Maybe.withDefault (Sudoku.emptySudoku model.info.m)
 
 
 type alias Statistics =
@@ -117,7 +125,7 @@ viewFrame frame =
         option =
             frame.problem
                 |> Sudoku.options
-                -- TODO include preference
+                -- TODO include cell preference
                 |> List.head
 
         content =
@@ -134,8 +142,12 @@ viewFrame frame =
 
 
 viewNoOptions : Frame -> Html msg
-viewNoOptions _ =
-    Html.text "no options left"
+viewNoOptions frame =
+    if Sudoku.isSolved frame.problem then
+        Html.text "Solved"
+
+    else
+        Html.text "Stuck"
 
 
 viewOptions : Cell -> Set Domain -> Html Msg

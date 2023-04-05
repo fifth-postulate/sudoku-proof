@@ -116,6 +116,13 @@ update message model =
             in
             ( Prepare s <| Entry.fromProblem info.m problem, Cmd.none )
 
+        ( Stop, PlayTreePath s info mdl ) ->
+            let
+                problem =
+                    Tree.toProblem mdl
+            in
+            ( Prepare s <| Entry.fromProblem info.m problem, Cmd.none )
+
         _ ->
             ( model, Cmd.none )
 
