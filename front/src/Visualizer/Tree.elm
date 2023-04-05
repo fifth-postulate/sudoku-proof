@@ -1,8 +1,12 @@
 module Visualizer.Tree exposing (Model, Msg, fromProblem, update, view)
 
 import Html.Styled as Html exposing (Html)
+import Html.Styled.Events as Event
+import Set exposing (Set)
 import Stack exposing (Stack)
 import Sudoku exposing (Problem)
+import Sudoku.Cell exposing (Cell)
+import Sudoku.Domain exposing (Domain)
 
 
 type Model
@@ -37,12 +41,43 @@ frameFrom problem =
 
 
 type Msg
-    = DoNothing
+    = Explore Cell Domain
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    ( model, Cmd.none )
+update msg (Model model) =
+    case msg of
+        Explore cell d ->
+            let
+                frame =
+                    Stack.peek model.stack
+
+                newFrame =
+                    model.stack
+                        |> Stack.peek
+                        |> Maybe.map .problem
+                        |> Maybe.map (Sudoku.execute (Sudoku.fill cell d))
+                        |> Maybe.map frameFrom
+            in
+            case newFrame of
+                Just f ->
+                    let
+                        s =
+                            model.statistics
+
+                        statistics =
+                            { s | nodesExplored = s.nodesExplored + 1 }
+                    in
+                    ( Model
+                        { model
+                            | stack = Stack.push f model.stack
+                            , statistics = statistics
+                        }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    ( Model model, Cmd.none )
 
 
 view : Model -> Html Msg
@@ -72,6 +107,48 @@ viewStatistics statistics =
 
 viewFrame : Frame -> Html Msg
 viewFrame frame =
+    let
+        option =
+            frame.problem
+                |> Sudoku.options
+                -- TODO include preference
+                |> List.head
+
+        content =
+            case option of
+                Nothing ->
+                    viewNoOptions frame
+
+                Just ( cell, ds ) ->
+                    viewOptions cell ds
+    in
     Html.div []
-        [ Html.text "exploring frame"
+        [ content
+        ]
+
+
+viewNoOptions : Frame -> Html msg
+viewNoOptions _ =
+    Html.text "no options left"
+
+
+viewOptions : Cell -> Set Domain -> Html Msg
+viewOptions cell ds =
+    let
+        viewOption : Domain -> Html Msg
+        viewOption d =
+            Html.li []
+                [ Html.a [ Event.onClick (Explore cell d) ]
+                    [ Html.text <| String.fromInt d
+                    ]
+                ]
+    in
+    Html.div []
+        [ Html.span [] [ Html.text <| "cell: " ++ String.fromInt cell ]
+        , Html.ul [] <|
+            List.map viewOption
+                (Set.toList
+                    --TODO order candidates
+                    ds
+                )
         ]

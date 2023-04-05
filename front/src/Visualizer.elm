@@ -5,6 +5,7 @@ import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
 import Sudoku exposing (clue, emptySudoku)
+import Task
 import Visualizer.Entry as Entry
 import Visualizer.ExecuteLeastComplexPlan as Execute
 import Visualizer.Tree as Tree
@@ -39,38 +40,12 @@ init : Int -> ( Model, Cmd Msg )
 init _ =
     let
         m =
-            9
+            4
 
         problem =
             emptySudoku m
-                |> clue 79 7
-                |> clue 75 8
-                |> clue 72 1
-                |> clue 69 2
-                |> clue 66 5
-                |> clue 62 9
-                |> clue 59 4
-                |> clue 57 2
-                |> clue 54 6
-                |> clue 53 7
-                |> clue 47 8
-                |> clue 43 2
-                |> clue 41 3
-                |> clue 39 6
-                |> clue 37 9
-                |> clue 33 9
-                |> clue 27 2
-                |> clue 26 6
-                |> clue 23 1
-                |> clue 21 4
-                |> clue 18 3
-                |> clue 14 5
-                |> clue 11 6
-                |> clue 8 3
-                |> clue 5 9
-                |> clue 1 5
     in
-    ( Prepare Tree <| Entry.fromProblem m problem, Cmd.none )
+    ( Prepare Tree <| Entry.fromProblem m problem, Task.perform identity (Task.succeed GoPlay) )
 
 
 type Msg
