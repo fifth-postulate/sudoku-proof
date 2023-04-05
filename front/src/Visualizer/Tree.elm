@@ -1,6 +1,8 @@
 module Visualizer.Tree exposing (Model, Msg, fromProblem, update, view)
 
+import Css exposing (..)
 import Html.Styled as Html exposing (Html)
+import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
 import Set exposing (Set)
 import Stack exposing (Stack)
@@ -89,8 +91,12 @@ view (Model model) =
                 |> Maybe.map .problem
                 |> Maybe.withDefault (Sudoku.emptySudoku model.info.m)
     in
-    Html.div []
-        [ Html.div []
+    Html.div
+        [ Attribute.css
+            [ displayFlex
+            ]
+        ]
+        [ Html.div [ Attribute.css [ width <| px 400 ] ]
             [ viewStatistics model.statistics
             , Stack.view viewFrame model.stack
             ]
