@@ -1,4 +1,4 @@
-module Stack exposing (Stack, empty, peek, pop, push, view)
+module Stack exposing (Stack, depth, empty, peek, pop, push, view)
 
 import Html.Styled as Html exposing (Html)
 
@@ -25,6 +25,11 @@ pop (Stack cs) =
 peek : Stack a -> Maybe a
 peek (Stack cs) =
     List.head cs
+
+
+depth : Stack a -> Int
+depth (Stack cs) =
+    List.length cs
 
 
 view : (Int -> a -> Html msg) -> Stack a -> Html msg

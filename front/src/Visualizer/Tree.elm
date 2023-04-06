@@ -24,7 +24,7 @@ fromProblem info problem =
     Model
         { info = info
         , stack = Stack.empty |> Stack.push (frameFrom problem)
-        , statistics = { nodesExplored = 1 }
+        , statistics = { nodesExplored = 1, maximumDepth = 1 }
         }
 
 
@@ -38,6 +38,7 @@ toProblem (Model model) =
 
 type alias Statistics =
     { nodesExplored : Int
+    , maximumDepth : Int
     }
 
 
@@ -76,8 +77,14 @@ update msg (Model model) =
                         s =
                             model.statistics
 
+                        currentDepth =
+                            Stack.depth model.stack
+
+                        maximumDepth =
+                            max currentDepth s.maximumDepth
+
                         statistics =
-                            { s | nodesExplored = s.nodesExplored + 1 }
+                            { s | nodesExplored = s.nodesExplored + 1, maximumDepth = maximumDepth }
                     in
                     ( Model
                         { model
@@ -126,6 +133,7 @@ viewStatistics : Statistics -> Html Msg
 viewStatistics statistics =
     Html.div []
         [ Html.span [] [ Html.text <| "#nodes: " ++ String.fromInt statistics.nodesExplored ]
+        , Html.span [] [ Html.text <| "max depth: " ++ String.fromInt statistics.maximumDepth ]
         ]
 
 
