@@ -9,6 +9,7 @@ import Stack exposing (Stack)
 import Sudoku exposing (Problem)
 import Sudoku.Cell exposing (Cell)
 import Sudoku.Domain exposing (Domain)
+import Sudoku.Strategy as Strategy exposing (Plan, Strategy)
 
 
 type Model
@@ -16,15 +17,17 @@ type Model
         { info : Sudoku.Info
         , stack : Stack Frame
         , statistics : Statistics
+        , cheap : Strategy
         }
 
 
-fromProblem : Sudoku.Info -> Problem -> Model
-fromProblem info problem =
+fromProblem : Strategy -> Sudoku.Info -> Problem -> Model
+fromProblem cheap info problem =
     Model
         { info = info
-        , stack = Stack.empty |> Stack.push (frameFrom problem)
+        , stack = Stack.empty |> Stack.push (frameFrom cheap problem)
         , statistics = { nodesExplored = 1, maximumDepth = 1 }
+        , cheap = cheap
         }
 
 
@@ -43,16 +46,33 @@ type alias Statistics =
 
 
 type alias Frame =
-    { problem : Problem }
+    { problem : Problem
+    , progress : Progress
+    }
 
 
-frameFrom : Problem -> Frame
-frameFrom problem =
-    { problem = problem }
+type Progress
+    = Cheap Plan
+    | Guess Plan
+    | Unexplored
+
+
+frameFrom : Strategy -> Problem -> Frame
+frameFrom cheap problem =
+    let
+        progress =
+            cheap problem
+                |> Maybe.map Cheap
+                |> Maybe.withDefault Unexplored
+    in
+    { problem = problem
+    , progress = progress
+    }
 
 
 type Msg
     = Explore Cell Domain
+    | Execute Plan
     | DropFrame
 
 
@@ -61,35 +81,41 @@ update msg (Model model) =
     case msg of
         Explore cell d ->
             let
-                frame =
-                    Stack.peek model.stack
-
                 newFrame =
                     model.stack
                         |> Stack.peek
                         |> Maybe.map .problem
                         |> Maybe.map (Sudoku.execute (Sudoku.fill cell d))
-                        |> Maybe.map frameFrom
+                        |> Maybe.map (frameFrom model.cheap)
             in
             case newFrame of
                 Just f ->
-                    let
-                        s =
-                            model.statistics
-
-                        currentDepth =
-                            Stack.depth model.stack
-
-                        maximumDepth =
-                            max currentDepth s.maximumDepth
-
-                        statistics =
-                            { s | nodesExplored = s.nodesExplored + 1, maximumDepth = maximumDepth }
-                    in
                     ( Model
                         { model
                             | stack = Stack.push f model.stack
-                            , statistics = statistics
+                            , statistics = updateStatistics <| Model model
+                        }
+                    , Cmd.none
+                    )
+
+                Nothing ->
+                    ( Model model, Cmd.none )
+
+        Execute plan ->
+            let
+                newFrame =
+                    model.stack
+                        |> Stack.peek
+                        |> Maybe.map .problem
+                        |> Maybe.map (Strategy.execute plan)
+                        |> Maybe.map (frameFrom model.cheap)
+            in
+            case newFrame of
+                Just f ->
+                    ( Model
+                        { model
+                            | stack = Stack.push f model.stack
+                            , statistics = updateStatistics <| Model model
                         }
                     , Cmd.none
                     )
@@ -105,6 +131,21 @@ update msg (Model model) =
                         |> Tuple.second
             in
             ( Model { model | stack = stack }, Cmd.none )
+
+
+updateStatistics : Model -> Statistics
+updateStatistics (Model model) =
+    let
+        s =
+            model.statistics
+
+        currentDepth =
+            Stack.depth model.stack
+
+        maximumDepth =
+            max currentDepth s.maximumDepth
+    in
+    { s | nodesExplored = s.nodesExplored + 1, maximumDepth = maximumDepth }
 
 
 view : Model -> Html Msg
@@ -157,9 +198,18 @@ viewFrame index frame =
 
                     else
                         viewOptions cell ds
+
+        shortcut =
+            case frame.progress of
+                Cheap plan ->
+                    Html.span [ Event.onClick <| Execute plan ] [ Html.text "↑" ]
+
+                _ ->
+                    Html.span [] []
     in
     Html.div []
-        [ content
+        [ shortcut
+        , content
         ]
 
 

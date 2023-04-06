@@ -5,6 +5,9 @@ import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
 import Sudoku exposing (clue, emptySudoku)
+import Sudoku.Strategy.Combinator exposing (either, repeated)
+import Sudoku.Strategy.HiddenSingle as HiddenSingle
+import Sudoku.Strategy.NakedSingle as NakedSingle
 import Task
 import Visualizer.Entry as Entry
 import Visualizer.ExecuteLeastComplexPlan as Execute
@@ -88,10 +91,13 @@ update message model =
 
                 Tree ->
                     let
+                        cheap =
+                            repeated <| either [ NakedSingle.strategy, HiddenSingle.strategy ]
+
                         m =
                             mdl
                                 |> Entry.toProblem
-                                |> Tree.fromProblem info
+                                |> Tree.fromProblem cheap info
                     in
                     ( PlayTreePath s info m, Cmd.none )
 
