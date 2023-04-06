@@ -27,12 +27,12 @@ peek (Stack cs) =
     List.head cs
 
 
-view : (a -> Html msg) -> Stack a -> Html msg
+view : (Int -> a -> Html msg) -> Stack a -> Html msg
 view subView (Stack cs) =
     let
-        frame a =
+        frame index a =
             Html.div []
-                [ subView a
+                [ subView index a
                 ]
     in
-    Html.div [] <| List.map frame cs
+    Html.div [] <| List.indexedMap frame cs

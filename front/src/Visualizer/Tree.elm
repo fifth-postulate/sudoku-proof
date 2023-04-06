@@ -52,6 +52,7 @@ frameFrom problem =
 
 type Msg
     = Explore Cell Domain
+    | DropFrame
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -89,6 +90,15 @@ update msg (Model model) =
                 Nothing ->
                     ( Model model, Cmd.none )
 
+        DropFrame ->
+            let
+                stack =
+                    model.stack
+                        |> Stack.pop
+                        |> Tuple.second
+            in
+            ( Model { model | stack = stack }, Cmd.none )
+
 
 view : Model -> Html Msg
 view (Model model) =
@@ -104,7 +114,7 @@ view (Model model) =
             [ displayFlex
             ]
         ]
-        [ Html.div [ Attribute.css [ width <| px 400 ] ]
+        [ Html.div [ Attribute.css [ width <| px 250 ] ]
             [ viewStatistics model.statistics
             , Stack.view viewFrame model.stack
             ]
@@ -119,8 +129,8 @@ viewStatistics statistics =
         ]
 
 
-viewFrame : Frame -> Html Msg
-viewFrame frame =
+viewFrame : Int -> Frame -> Html Msg
+viewFrame index frame =
     let
         option =
             frame.problem
@@ -134,7 +144,11 @@ viewFrame frame =
                     viewNoOptions frame
 
                 Just ( cell, ds ) ->
-                    viewOptions cell ds
+                    if index == 0 then
+                        wrap <| viewOptions cell ds
+
+                    else
+                        viewOptions cell ds
     in
     Html.div []
         [ content
@@ -150,6 +164,22 @@ viewNoOptions frame =
         Html.text "Stuck"
 
 
+wrap : Html Msg -> Html Msg
+wrap content =
+    Html.div [ Attribute.css [ position relative ] ]
+        [ content
+        , Html.span
+            [ Attribute.css
+                [ right <| px 3
+                , top <| px 3
+                , position absolute
+                ]
+            , Event.onClick DropFrame
+            ]
+            [ Html.text "❌" ]
+        ]
+
+
 viewOptions : Cell -> Set Domain -> Html Msg
 viewOptions cell ds =
     let
@@ -161,7 +191,7 @@ viewOptions cell ds =
                     ]
                 ]
     in
-    Html.div []
+    Html.div [ Attribute.css [ position relative ] ]
         [ Html.span [] [ Html.text <| "cell: " ++ String.fromInt cell ]
         , Html.ul [] <|
             List.map viewOption
