@@ -14,7 +14,13 @@ import Sudoku.Domain exposing (Domain)
 
 
 type alias Model =
-    { m : Int, clues : List Clue }
+    { m : Int, clues : List Clue, description : String, importError : Maybe Error }
+
+
+type Error
+    = IncorrectNumberOfEntries Int
+    | UnrecognizedEntries
+    | EntryOutfOfBound
 
 
 fromProblem : Int -> Problem -> Model
@@ -24,7 +30,7 @@ fromProblem size problem =
             problem
                 |> Sudoku.toClues
     in
-    { m = size, clues = clues }
+    { m = size, clues = clues, description = "", importError = Nothing }
 
 
 toProblem : Model -> Problem
@@ -44,6 +50,8 @@ type Msg
     | SizeChanged Int
     | ClueAdded Clue
     | ClueRemoved Cell
+    | UpdateDescription String
+    | Import
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -66,6 +74,66 @@ update msg model =
         ClueRemoved cell ->
             ( { model | clues = remove cell model.clues }, Cmd.none )
 
+        UpdateDescription description ->
+            ( { model | description = description, importError = Nothing }, Cmd.none )
+
+        Import ->
+            case importFromDescription model of
+                Ok m ->
+                    ( m, Cmd.none )
+
+                Err e ->
+                    ( { model | importError = Just e }, Cmd.none )
+
+
+importFromDescription : Model -> Result Error Model
+importFromDescription model =
+    let
+        entries =
+            model.description
+                |> String.split ""
+                |> List.map String.toInt
+                |> List.map (Maybe.withDefault -1)
+
+        n =
+            List.length entries
+
+        inRange max value =
+            0 <= value && value <= max
+    in
+    case ( n, List.any ((==) -1) entries ) of
+        ( 16, False ) ->
+            if List.all (inRange 4) entries then
+                let
+                    clues =
+                        entries
+                            |> List.indexedMap Tuple.pair
+                            |> List.filter (Tuple.second >> ((==) 0 >> not))
+                in
+                Ok { model | m = 4, clues = clues, description = "", importError = Nothing }
+
+            else
+                Err <| EntryOutfOfBound
+
+        ( 81, False ) ->
+            if List.all (inRange 9) entries then
+                let
+                    clues =
+                        entries
+                            |> List.indexedMap Tuple.pair
+                            |> List.filter (Tuple.second >> ((==) 0 >> not))
+                in
+                Ok { model | m = 9, clues = clues, description = "", importError = Nothing }
+
+            else
+                Err <| EntryOutfOfBound
+
+        ( _, True ) ->
+            Err <| UnrecognizedEntries
+
+        ( _, False ) ->
+            Err <| IncorrectNumberOfEntries n
+
 
 view : Model -> Html Msg
 view model =
@@ -81,6 +149,7 @@ viewControls model =
     Html.div [ Attribute.css [ displayFlex ] ]
         [ viewReset
         , viewSize model
+        , viewWikiEntry model
         ]
 
 
@@ -102,6 +171,34 @@ viewSize model =
 viewSizeOption : Model -> Int -> Html Msg
 viewSizeOption { m } n =
     Html.option [ Attribute.value <| String.fromInt n, Attribute.selected <| m == n ] [ Html.text <| String.fromInt n ]
+
+
+viewWikiEntry : Model -> Html Msg
+viewWikiEntry model =
+    let
+        errorMessage =
+            case model.importError of
+                Nothing ->
+                    ""
+
+                Just _ ->
+                    "❌"
+    in
+    Html.span []
+        [ Html.input
+            [ Attribute.type_ "text"
+            , Attribute.value model.description
+            , Event.onInput UpdateDescription
+            ]
+            []
+        , Html.input
+            [ Attribute.type_ "button"
+            , Attribute.value "import"
+            , Event.onClick Import
+            ]
+            []
+        , Html.span [] [ Html.text errorMessage ]
+        ]
 
 
 viewClues : Model -> Html Msg

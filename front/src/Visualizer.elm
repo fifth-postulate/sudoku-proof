@@ -48,7 +48,11 @@ init _ =
         problem =
             emptySudoku m
     in
-    ( Prepare Tree <| Entry.fromProblem m problem, Cmd.none ) --Task.perform identity (Task.succeed GoPlay) )
+    ( Prepare Tree <| Entry.fromProblem m problem, Cmd.none )
+
+
+
+--Task.perform identity (Task.succeed GoPlay) )
 
 
 type Msg
