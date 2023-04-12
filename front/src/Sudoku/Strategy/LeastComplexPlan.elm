@@ -49,13 +49,14 @@ firstSuggestionFromQueue queue problem =
                                 |> List.map Tuple.first
 
                         augmentedQueue =
-                            if not <| List.isEmpty cheap then
-                                PriorityQueue.insert (plan ++ cheap) remaining
+                            case cheap of
+                                c :: _ ->
+                                    PriorityQueue.insert (plan ++ List.singleton c) remaining
 
-                            else
-                                costly
-                                    |> List.map (List.singleton >> List.append plan)
-                                    |> List.foldr PriorityQueue.insert remaining
+                                [] ->
+                                    costly
+                                        |> List.map (List.singleton >> List.append plan)
+                                        |> List.foldr PriorityQueue.insert remaining
                     in
                     firstSuggestionFromQueue augmentedQueue problem
 
