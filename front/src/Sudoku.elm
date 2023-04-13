@@ -1,8 +1,9 @@
-module Sudoku exposing (Action(..), Info, Problem, candidatesAt, clue, clueFrom, emptySudoku, execute, fill, incidentBlocks, isOverConstrained, isSolved, options, toClues, view, viewAction)
+module Sudoku exposing (Action(..), Info, Problem, candidatesAt, clue, clueFrom, emptySudoku, execute, fill, frequency, incidentBlocks, isOverConstrained, isSolved, options, toClues, view, viewAction)
 
 import Array exposing (Array)
 import Array.Util as Util
 import Css exposing (..)
+import Dict exposing (Dict)
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Set exposing (Set)
@@ -19,6 +20,28 @@ type Problem
 type State
     = Determined Domain
     | Options (Set Domain)
+
+
+frequency : Problem -> Dict Domain Int
+frequency (Problem { states }) =
+    let
+        bump : Maybe Int -> Maybe Int
+        bump count =
+            case count of
+                Just n ->
+                    Just <| n + 1
+
+                Nothing ->
+                    Just 1
+
+        increment d freq =
+            freq
+                |> Dict.update d bump
+    in
+    states
+        |> Array.toList
+        |> List.concatMap (candidates >> Set.toList)
+        |> List.foldl increment Dict.empty
 
 
 isSolved : Problem -> Bool

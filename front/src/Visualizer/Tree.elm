@@ -1,6 +1,7 @@
 module Visualizer.Tree exposing (Model, Msg, fromProblem, toProblem, update, view)
 
 import Css exposing (..)
+import Dict exposing (Dict)
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
@@ -194,10 +195,10 @@ viewFrame index frame =
 
                 Just ( cell, ds ) ->
                     if index == 0 then
-                        wrap <| viewOptions cell ds
+                        wrap <| viewOptions frame.problem cell ds
 
                     else
-                        viewOptions cell ds
+                        viewOptions frame.problem cell ds
 
         shortcut =
             case frame.progress of
@@ -238,9 +239,17 @@ wrap content =
         ]
 
 
-viewOptions : Cell -> Set Domain -> Html Msg
-viewOptions cell ds =
+viewOptions : Problem -> Cell -> Set Domain -> Html Msg
+viewOptions problem cell ds =
     let
+        actualFrequency =
+            Sudoku.frequency problem
+
+        frequency d =
+            actualFrequency
+                |> Dict.get d
+                |> Maybe.withDefault 0
+
         viewOption : Domain -> Html Msg
         viewOption d =
             Html.li []
@@ -253,8 +262,8 @@ viewOptions cell ds =
         [ Html.span [] [ Html.text <| "cell: " ++ String.fromInt cell ]
         , Html.ul [] <|
             List.map viewOption
-                (Set.toList
-                    --TODO order candidates
-                    ds
+                (ds
+                    |> Set.toList
+                    |> List.sortBy frequency
                 )
         ]

@@ -74,7 +74,7 @@ init _ =
                 |> clue 73 7
                 |> clue 75 4
     in
-    ( Prepare LeastComplexPath <| Entry.fromProblem m problem, Task.perform identity <| Task.succeed GoPlay )
+    ( Prepare Tree <| Entry.fromProblem m problem, Task.perform identity <| Task.succeed GoPlay )
 
 
 
