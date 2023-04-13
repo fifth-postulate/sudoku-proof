@@ -11,6 +11,7 @@ import Sudoku exposing (Problem)
 import Sudoku.Cell exposing (Cell)
 import Sudoku.Domain exposing (Domain)
 import Sudoku.Strategy as Strategy exposing (Plan, Strategy)
+import Visualizer.Tree.Statistics as Statistics exposing (Statistics)
 
 
 type Model
@@ -27,7 +28,7 @@ fromProblem cheap info problem =
     Model
         { info = info
         , stack = Stack.empty |> Stack.push (frameFrom cheap problem)
-        , statistics = { nodesExplored = 1, maximumDepth = 1 }
+        , statistics = Statistics.starting
         , cheap = cheap
         }
 
@@ -38,12 +39,6 @@ toProblem (Model model) =
         |> Stack.peek
         |> Maybe.map .problem
         |> Maybe.withDefault (Sudoku.emptySudoku model.info.m)
-
-
-type alias Statistics =
-    { nodesExplored : Int
-    , maximumDepth : Int
-    }
 
 
 type alias Frame =
@@ -94,8 +89,8 @@ update msg (Model model) =
                     ( Model
                         { model
                             | stack = Stack.push f model.stack
-                            , statistics = updateStatistics <| Model model
                         }
+                        |> explore
                     , Cmd.none
                     )
 
@@ -116,8 +111,8 @@ update msg (Model model) =
                     ( Model
                         { model
                             | stack = Stack.push f model.stack
-                            , statistics = updateStatistics <| Model model
                         }
+                        |> determine
                     , Cmd.none
                     )
 
@@ -134,19 +129,32 @@ update msg (Model model) =
             ( Model { model | stack = stack }, Cmd.none )
 
 
-updateStatistics : Model -> Statistics
-updateStatistics (Model model) =
+explore : Model -> Model
+explore (Model model) =
     let
-        s =
-            model.statistics
-
         currentDepth =
             Stack.depth model.stack
 
-        maximumDepth =
-            max currentDepth s.maximumDepth
+        statistics =
+            model.statistics
+                |> Statistics.explored
+                |> Statistics.updateDepth currentDepth
     in
-    { s | nodesExplored = s.nodesExplored + 1, maximumDepth = maximumDepth }
+    Model { model | statistics = statistics }
+
+
+determine : Model -> Model
+determine (Model model) =
+    let
+        currentDepth =
+            Stack.depth model.stack
+
+        statistics =
+            model.statistics
+                |> Statistics.determined
+                |> Statistics.updateDepth currentDepth
+    in
+    Model { model | statistics = statistics }
 
 
 view : Model -> Html Msg
@@ -164,18 +172,10 @@ view (Model model) =
             ]
         ]
         [ Html.div [ Attribute.css [ width <| px 250 ] ]
-            [ viewStatistics model.statistics
+            [ Statistics.view model.statistics
             , Stack.view viewFrame model.stack
             ]
         , Sudoku.view model.info problem
-        ]
-
-
-viewStatistics : Statistics -> Html Msg
-viewStatistics statistics =
-    Html.div []
-        [ Html.span [] [ Html.text <| "#nodes: " ++ String.fromInt statistics.nodesExplored ]
-        , Html.span [] [ Html.text <| "max depth: " ++ String.fromInt statistics.maximumDepth ]
         ]
 
 
