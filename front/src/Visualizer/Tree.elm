@@ -184,7 +184,7 @@ viewFrame index frame =
         option =
             frame.problem
                 |> Sudoku.options
-                -- TODO include cell preference
+                |> List.sortBy (Tuple.second >> Set.size)
                 |> List.head
 
         content =
