@@ -4,11 +4,10 @@ import Browser
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
-import Sudoku exposing (clue, emptySudoku)
+import Sudoku exposing (Problem, clue, emptySudoku)
 import Sudoku.Strategy.Combinator exposing (either, repeated)
 import Sudoku.Strategy.HiddenSingle as HiddenSingle
 import Sudoku.Strategy.NakedSingle as NakedSingle
-import Task
 import Visualizer.Entry as Entry
 import Visualizer.ExecuteLeastComplexPlan as Execute
 import Visualizer.Tree as Tree
@@ -28,11 +27,13 @@ type Model
     = Prepare StrategyPicked Entry.Model
     | PlayLeastComplexPath StrategyPicked Info Execute.Model
     | PlayTreePath StrategyPicked Info Tree.Model
+    | PlayRandomExplore StrategyPicked Info Problem
 
 
 type StrategyPicked
     = LeastComplexPath
     | Tree
+    | RandomExplore
 
 
 type alias Info =
@@ -74,7 +75,7 @@ init _ =
                 |> clue 73 7
                 |> clue 75 4
     in
-    ( Prepare Tree <| Entry.fromProblem m problem, Cmd.none )
+    ( Prepare RandomExplore <| Entry.fromProblem m problem, Cmd.none )
 
 
 
@@ -131,6 +132,14 @@ update message model =
                     in
                     ( PlayTreePath s info m, Cmd.none )
 
+                RandomExplore ->
+                    let
+                        m =
+                            mdl
+                                |> Entry.toProblem
+                    in
+                    ( PlayRandomExplore s info m, Cmd.none )
+
         ( LeastComplexPathMsg msg, PlayLeastComplexPath s info mdl ) ->
             let
                 m =
@@ -156,6 +165,13 @@ update message model =
             let
                 problem =
                     Tree.toProblem mdl
+            in
+            ( Prepare s <| Entry.fromProblem info.m problem, Cmd.none )
+
+        ( Stop, PlayRandomExplore s info p ) ->
+            let
+                problem =
+                    p
             in
             ( Prepare s <| Entry.fromProblem info.m problem, Cmd.none )
 
@@ -193,6 +209,14 @@ viewControl model =
                         ]
                         []
                     , Html.label [ Attribute.for "strategy:tree" ] [ Html.text "T" ]
+                    , Html.input
+                        [ Attribute.id "strategy:randomexplore"
+                        , Attribute.type_ "radio"
+                        , Attribute.checked <| s == RandomExplore
+                        , Event.onCheck <| \_ -> PickStrategy RandomExplore
+                        ]
+                        []
+                    , Html.label [ Attribute.for "strategy:randomexplore" ] [ Html.text "R" ]
                     , Html.button [ Event.onClick GoPlay ] [ Html.text "▶️" ]
                     ]
 
@@ -213,6 +237,9 @@ viewContent model =
 
         PlayTreePath _ info mdl ->
             Html.map TreeMsg <| Tree.view mdl
+
+        PlayRandomExplore _ info p ->
+            Html.text "work in progress"
 
 
 subscriptions : Model -> Sub Msg
