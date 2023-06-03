@@ -7,7 +7,7 @@ import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
 import Json.Decode as Decode
 import Set
-import Sudoku exposing (Problem, emptySudoku)
+import Sudoku exposing (Action, Problem, emptySudoku)
 import Sudoku.Cell exposing (Cell)
 import Sudoku.Clue exposing (Clue)
 import Sudoku.Domain exposing (Domain)
@@ -35,14 +35,24 @@ fromProblem size problem =
 
 toProblem : Model -> Problem
 toProblem { m, clues } =
+    let
+        empty =
+            emptySudoku m
+    in
     clues
         |> List.map (uncurry Sudoku.fill)
-        |> List.foldl Sudoku.execute (emptySudoku m)
+        |> List.foldl (lift Sudoku.execute) (Just empty)
+        |> Maybe.withDefault empty
 
 
 uncurry : (a -> b -> c) -> ( a, b ) -> c
 uncurry f ( a, b ) =
     f a b
+
+
+lift : (Action -> Problem -> Maybe Problem) -> Action -> Maybe Problem -> Maybe Problem
+lift f a problem =
+    Maybe.andThen (f a) problem
 
 
 type Msg

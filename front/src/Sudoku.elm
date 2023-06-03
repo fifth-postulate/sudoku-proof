@@ -138,7 +138,7 @@ emptySudoku m =
     Problem { states = states, blocks = Blocks.sudokuBlocks m }
 
 
-clue : Cell -> Domain -> Problem -> Problem
+clue : Cell -> Domain -> Problem -> Maybe Problem
 clue cell d =
     execute (Fill cell d)
 
@@ -157,7 +157,7 @@ fill =
     Fill
 
 
-execute : Action -> Problem -> Problem
+execute : Action -> Problem -> Maybe Problem
 execute (Fill cell d) (Problem problem) =
     let
         consequences =
@@ -172,7 +172,7 @@ execute (Fill cell d) (Problem problem) =
         states =
             List.foldl apply problem.states consequences
     in
-    Problem { problem | states = states }
+    Just <| Problem { problem | states = states }
 
 
 type Consequence

@@ -11,7 +11,12 @@ type alias Plan =
     List Action
 
 
-execute : Plan -> Problem -> Problem
+execute : Plan -> Problem -> Maybe Problem
 execute plan problem =
     plan
-        |> List.foldl Sudoku.execute problem
+        |> List.foldl (lift Sudoku.execute) (Just problem)
+
+
+lift : (Action -> Problem -> Maybe Problem) -> Action -> Maybe Problem -> Maybe Problem
+lift f a p =
+    Maybe.andThen (f a) p

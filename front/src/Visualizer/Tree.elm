@@ -81,7 +81,7 @@ update msg (Model model) =
                     model.stack
                         |> Stack.peek
                         |> Maybe.map .problem
-                        |> Maybe.map (Sudoku.execute (Sudoku.fill cell d))
+                        |> Maybe.andThen (Sudoku.execute (Sudoku.fill cell d))
                         |> Maybe.map (frameFrom model.cheap)
             in
             case newFrame of
@@ -103,7 +103,7 @@ update msg (Model model) =
                     model.stack
                         |> Stack.peek
                         |> Maybe.map .problem
-                        |> Maybe.map (Strategy.execute plan)
+                        |> Maybe.andThen (Strategy.execute plan)
                         |> Maybe.map (frameFrom model.cheap)
             in
             case newFrame of

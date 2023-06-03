@@ -51,31 +51,32 @@ init _ =
         problem =
             emptySudoku m
                 |> clue 5 4
-                |> clue 7 2
-                |> clue 8 8
-                |> clue 9 4
-                |> clue 11 6
-                |> clue 17 5
-                |> clue 18 1
-                |> clue 22 3
-                |> clue 24 6
-                |> clue 30 3
-                |> clue 32 1
-                |> clue 37 8
-                |> clue 38 7
-                |> clue 42 1
-                |> clue 43 4
-                |> clue 48 7
-                |> clue 50 9
-                |> clue 56 2
-                |> clue 58 1
-                |> clue 62 3
-                |> clue 63 9
-                |> clue 69 5
-                |> clue 71 7
-                |> clue 72 6
-                |> clue 73 7
-                |> clue 75 4
+                |> Maybe.andThen (clue 7 2)
+                |> Maybe.andThen (clue 8 8)
+                |> Maybe.andThen (clue 9 4)
+                |> Maybe.andThen (clue 11 6)
+                |> Maybe.andThen (clue 17 5)
+                |> Maybe.andThen (clue 18 1)
+                |> Maybe.andThen (clue 22 3)
+                |> Maybe.andThen (clue 24 6)
+                |> Maybe.andThen (clue 30 3)
+                |> Maybe.andThen (clue 32 1)
+                |> Maybe.andThen (clue 37 8)
+                |> Maybe.andThen (clue 38 7)
+                |> Maybe.andThen (clue 42 1)
+                |> Maybe.andThen (clue 43 4)
+                |> Maybe.andThen (clue 48 7)
+                |> Maybe.andThen (clue 50 9)
+                |> Maybe.andThen (clue 56 2)
+                |> Maybe.andThen (clue 58 1)
+                |> Maybe.andThen (clue 62 3)
+                |> Maybe.andThen (clue 63 9)
+                |> Maybe.andThen (clue 69 5)
+                |> Maybe.andThen (clue 71 7)
+                |> Maybe.andThen (clue 72 6)
+                |> Maybe.andThen (clue 73 7)
+                |> Maybe.andThen (clue 75 4)
+                |> Maybe.withDefault (emptySudoku m)
     in
     ( Prepare RandomExplore <| Entry.fromProblem m problem, Task.perform identity <| Task.succeed GoPlay )
 

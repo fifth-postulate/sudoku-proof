@@ -78,7 +78,7 @@ verdict problem plan =
     let
         result =
             plan
-                |> List.foldl execute problem
+                |> List.foldl (lift execute) (Just problem)
 
         indeterminate aProblem =
             let
@@ -93,12 +93,21 @@ verdict problem plan =
                         |> List.concatMap toAction
             in
             Indeterminate followups
+
+        judge r =
+            if isSolved r then
+                Solved
+
+            else if isOverConstrained r then
+                Unsolvable
+
+            else
+                indeterminate r
     in
-    if isSolved result then
-        Solved
+    Maybe.map judge result
+        |> Maybe.withDefault Unsolvable
 
-    else if isOverConstrained result then
-        Unsolvable
 
-    else
-        indeterminate result
+lift : (Action -> Problem -> Maybe Problem) -> Action -> Maybe Problem -> Maybe Problem
+lift f a problem =
+    Maybe.andThen (f a) problem

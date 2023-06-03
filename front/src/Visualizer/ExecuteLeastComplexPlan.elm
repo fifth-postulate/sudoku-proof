@@ -5,6 +5,7 @@ import Css.Global exposing (global, selector)
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Attributes as Attribute
 import Html.Styled.Events as Event
+import Maybe exposing (withDefault)
 import Set
 import Sudoku exposing (Action(..), Problem)
 import Sudoku.Strategy exposing (Plan)
@@ -33,7 +34,13 @@ toProblem model =
 
         Solved problem { history } ->
             history
-                |> List.foldr Sudoku.execute problem
+                |> List.foldr (lift Sudoku.execute) (Just problem)
+                |> Maybe.withDefault problem
+
+
+lift : (Action -> Problem -> Maybe Problem) -> Action -> Maybe Problem -> Maybe Problem
+lift f a p =
+    Maybe.andThen (f a) p
 
 
 type Msg
@@ -73,8 +80,12 @@ complexity problem plan =
                         cost =
                             Sudoku.candidatesAt c problem
                                 |> Set.size
+
+                        prblm =
+                            Sudoku.execute p problem
+                                |> withDefault problem
                     in
-                    cost * complexity (Sudoku.execute p problem) ps
+                    cost * complexity prblm ps
 
 
 advance : Execution -> Execution
@@ -120,7 +131,8 @@ viewSolved info problem execution =
     let
         current =
             execution.history
-                |> List.foldr Sudoku.execute problem
+                |> List.foldr (lift Sudoku.execute) (Just problem)
+                |> Maybe.withDefault problem
     in
     Html.div []
         [ global

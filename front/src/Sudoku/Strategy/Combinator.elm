@@ -32,7 +32,13 @@ tailrec_repeated : Plan -> Strategy -> Strategy
 tailrec_repeated plan strategy problem =
     case strategy problem of
         Just continuedPlan ->
-            tailrec_repeated (plan ++ continuedPlan) strategy (Strategy.execute continuedPlan problem)
+            case Strategy.execute continuedPlan problem of
+                Just p ->
+                    tailrec_repeated (plan ++ continuedPlan) strategy p
+
+                Nothing ->
+                    -- This should never occur
+                    Just plan
 
         Nothing ->
             if not <| List.isEmpty plan then
