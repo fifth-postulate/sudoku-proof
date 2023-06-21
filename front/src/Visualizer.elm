@@ -8,8 +8,10 @@ import Sudoku exposing (Problem, clue, emptySudoku)
 import Sudoku.Strategy.Combinator exposing (either, repeated)
 import Sudoku.Strategy.HiddenSingle as HiddenSingle
 import Sudoku.Strategy.NakedSingle as NakedSingle
+import Task
 import Visualizer.Entry as Entry
 import Visualizer.ExecuteLeastComplexPlan as Execute
+import Visualizer.RandomExplore as RandomExplore
 import Visualizer.Tree as Tree
 
 
@@ -27,7 +29,7 @@ type Model
     = Prepare StrategyPicked Entry.Model
     | PlayLeastComplexPath StrategyPicked Info Execute.Model
     | PlayTreePath StrategyPicked Info Tree.Model
-    | PlayRandomExplore StrategyPicked Info Problem
+    | PlayRandomExplore StrategyPicked Info RandomExplore.Model
 
 
 type StrategyPicked
@@ -75,7 +77,7 @@ init _ =
                 |> clue 73 7
                 |> clue 75 4
     in
-    ( Prepare RandomExplore <| Entry.fromProblem m problem, Cmd.none )
+    ( Prepare RandomExplore <| Entry.fromProblem m problem, Task.perform identity <| Task.succeed GoPlay )
 
 
 
@@ -86,6 +88,7 @@ type Msg
     = PrepareMsg Entry.Msg
     | LeastComplexPathMsg Execute.Msg
     | TreeMsg Tree.Msg
+    | RandomExploreMsg RandomExplore.Msg
     | PickStrategy StrategyPicked
     | GoPlay
     | Stop
@@ -137,6 +140,7 @@ update message model =
                         m =
                             mdl
                                 |> Entry.toProblem
+                                |> RandomExplore.fromProblem info
                     in
                     ( PlayRandomExplore s info m, Cmd.none )
 
@@ -168,10 +172,10 @@ update message model =
             in
             ( Prepare s <| Entry.fromProblem info.m problem, Cmd.none )
 
-        ( Stop, PlayRandomExplore s info p ) ->
+        ( Stop, PlayRandomExplore s info m ) ->
             let
                 problem =
-                    p
+                    RandomExplore.toProblem m
             in
             ( Prepare s <| Entry.fromProblem info.m problem, Cmd.none )
 
@@ -238,8 +242,8 @@ viewContent model =
         PlayTreePath _ info mdl ->
             Html.map TreeMsg <| Tree.view mdl
 
-        PlayRandomExplore _ info p ->
-            Html.text "work in progress"
+        PlayRandomExplore _ info mdl ->
+            Html.map RandomExploreMsg <| RandomExplore.view mdl
 
 
 subscriptions : Model -> Sub Msg
