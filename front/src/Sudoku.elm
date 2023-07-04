@@ -158,10 +158,10 @@ fill =
 
 
 execute : Action -> Problem -> Maybe Problem
-execute (Fill cell d) (Problem problem) =
+execute (Fill cell d) ((Problem p) as problem) =
     let
         consequences =
-            problem.blocks
+            p.blocks
                 |> List.filter (Set.member cell)
                 |> List.foldl Set.union Set.empty
                 |> Set.remove cell
@@ -170,9 +170,13 @@ execute (Fill cell d) (Problem problem) =
                 |> (::) (Determine d cell)
 
         states =
-            List.foldl apply problem.states consequences
+            List.foldl apply p.states consequences
     in
-    Just <| Problem { problem | states = states }
+    if Set.member d <| candidatesAt cell problem then
+        Just <| Problem { p | states = states }
+
+    else
+        Nothing
 
 
 type Consequence
