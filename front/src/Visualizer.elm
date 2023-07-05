@@ -78,7 +78,7 @@ init _ =
                 |> Maybe.andThen (clue 75 4)
                 |> Maybe.withDefault (emptySudoku m)
     in
-    ( Prepare RandomExplore <| Entry.fromProblem m problem, Task.perform identity <| Task.succeed GoPlay )
+    ( Prepare RandomExplore <| Entry.fromProblem m problem, Cmd.none )
 
 
 
