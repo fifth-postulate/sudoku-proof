@@ -1,4 +1,4 @@
-module Visualizer.RandomExplore exposing (Model, Msg, fromProblem, toProblem, view)
+module Visualizer.RandomExplore exposing (Model, Msg, fromProblem, toProblem, update, view)
 
 import Html.Styled as Html exposing (Html)
 import Html.Styled.Events as Event
@@ -73,7 +73,7 @@ update msg (Model model) =
                         |> Maybe.map (Suite.register model.statistics)
                         |> Maybe.withDefault model.statistics
             in
-            ( Model { model | statistics = statistics }, Cmd.none )
+            ( Model { model | statistics = statistics, suite = Nothing }, Cmd.none )
 
 
 view : Model -> Html Msg
@@ -94,6 +94,7 @@ viewControl model =
         [ run 1
         , run 10
         , run 100
+        , run 1000
         ]
 
 

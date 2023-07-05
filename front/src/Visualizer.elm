@@ -159,6 +159,13 @@ update message model =
             in
             ( PlayTreePath s info m, Cmd.map TreeMsg cmd )
 
+        ( RandomExploreMsg msg, PlayRandomExplore s info mdl ) ->
+            let
+                ( m, cmd ) =
+                    RandomExplore.update msg mdl
+            in
+            ( PlayRandomExplore s info m, Cmd.map RandomExploreMsg cmd )
+
         ( Stop, PlayLeastComplexPath s info mdl ) ->
             let
                 problem =

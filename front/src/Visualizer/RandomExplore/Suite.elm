@@ -39,10 +39,18 @@ finished s =
 
 register : Statistics -> Model -> Statistics
 register statistics model =
+    let
+        updateStatistics r s =
+            case r of
+                Success depth ->
+                    Statistics.success depth s
+
+                Failed depth ->
+                    Statistics.failure depth s
+    in
     case model of
         Finished resolutions ->
-            -- TODO
-            statistics
+            List.foldl updateStatistics statistics resolutions
 
         _ ->
             statistics
@@ -58,6 +66,7 @@ type Msg
     | Examine Int (Maybe Problem)
     | CellPicked Int Problem Cell
     | CandidatePicked Int Problem Cell Domain
+    | Done
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -69,7 +78,7 @@ update msg model =
                 ( Suite { suite | remainingRuns = suite.remainingRuns - 1 }, do <| Examine 0 (Just suite.problem) )
 
             else
-                ( Finished suite.resolutions, Cmd.none )
+                ( Finished suite.resolutions, do Done )
 
         ( Examine depth (Just problem), Suite suite ) ->
             if Sudoku.isSolved problem then
@@ -112,6 +121,9 @@ update msg model =
             in
             -- TODO apply cheap strategy
             ( model, do <| Examine (depth + 1) result )
+
+        ( Done, _ ) ->
+            ( model, Cmd.none )
 
         ( _, Finished _ ) ->
             ( model, Cmd.none )
