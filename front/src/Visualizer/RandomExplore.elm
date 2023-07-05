@@ -55,12 +55,11 @@ update msg (Model model) =
                             Cmd.map SuiteMsg c
 
                         cmds =
-                            case m of
-                                Finish ->
-                                    [ cmd, Task.perform identity <| Task.succeed Tally ]
+                            if Suite.finished suite then
+                                [ cmd, Task.perform identity <| Task.succeed Tally ]
 
-                                _ ->
-                                    [ cmd ]
+                            else
+                                [ cmd ]
                     in
                     ( Model { model | suite = Just s }, Cmd.batch cmds )
 
@@ -102,12 +101,9 @@ runOf : Model -> Int -> Html Msg
 runOf (Model model) numberOfRuns =
     let
         suiteRunning =
-            case model.suite of
-                Just s ->
-                    Suite.finished s
-
-                Nothing ->
-                    False
+            model.suite
+                |> Maybe.map Suite.finished
+                |> Maybe.withDefault False
 
         attributes =
             if not suiteRunning then

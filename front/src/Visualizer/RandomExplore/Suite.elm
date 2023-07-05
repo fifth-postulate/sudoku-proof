@@ -1,6 +1,11 @@
 module Visualizer.RandomExplore.Suite exposing (Model, Msg(..), create, finished, register, update)
 
-import Sudoku exposing (Problem)
+import Random exposing (generate, uniform)
+import Set
+import Sudoku exposing (Problem, candidatesAt, cellOptions, fill)
+import Sudoku.Cell exposing (Cell)
+import Sudoku.Domain exposing (Domain)
+import Task
 import Visualizer.RandomExplore.Statistics as Statistics exposing (Statistics)
 
 
@@ -43,16 +48,75 @@ register statistics model =
             statistics
 
 
-type alias Resolution =
-    { name : String
-    }
+type Resolution
+    = Success Int
+    | Failed Int
 
 
 type Msg
     = Start
-    | Finish
+    | Examine Int (Maybe Problem)
+    | CellPicked Int Problem Cell
+    | CandidatePicked Int Problem Cell Domain
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    ( model, Cmd.none )
+    case ( msg, model ) of
+        ( Start, Suite suite ) ->
+            if suite.remainingRuns > 0 then
+                -- TODO apply cheap strategy
+                ( Suite { suite | remainingRuns = suite.remainingRuns - 1 }, do <| Examine 0 (Just suite.problem) )
+
+            else
+                ( Finished suite.resolutions, Cmd.none )
+
+        ( Examine depth (Just problem), Suite suite ) ->
+            if Sudoku.isSolved problem then
+                ( Suite { suite | resolutions = Success depth :: suite.resolutions }, do Start )
+
+            else if Sudoku.isOverConstrained problem then
+                ( Suite { suite | resolutions = Failed depth :: suite.resolutions }, do Start )
+
+            else
+                case cellOptions problem of
+                    c :: cs ->
+                        ( model, generate (CellPicked depth problem) <| uniform c cs )
+
+                    [] ->
+                        ( Suite { suite | resolutions = Failed depth :: suite.resolutions }, do Start )
+
+        ( Examine depth Nothing, Suite suite ) ->
+            ( Suite { suite | resolutions = Failed depth :: suite.resolutions }, do Start )
+
+        ( CellPicked depth problem cell, Suite suite ) ->
+            let
+                candidates =
+                    candidatesAt cell problem
+                        |> Set.toList
+            in
+            case candidates of
+                c :: cs ->
+                    ( model, generate (CandidatePicked depth problem cell) <| uniform c cs )
+
+                [] ->
+                    ( Suite { suite | resolutions = Failed depth :: suite.resolutions }, do Start )
+
+        ( CandidatePicked depth problem cell candidate, Suite suite ) ->
+            let
+                action =
+                    fill cell candidate
+
+                result =
+                    Sudoku.execute action problem
+            in
+            -- TODO apply cheap strategy
+            ( model, do <| Examine (depth + 1) result )
+
+        ( _, Finished _ ) ->
+            ( model, Cmd.none )
+
+
+do : Msg -> Cmd Msg
+do msg =
+    Task.perform identity <| Task.succeed msg
