@@ -3,7 +3,7 @@ module NakedSingleTest exposing (..)
 import Expect
 import Sudoku exposing (Problem, clue)
 import Sudoku.Strategy exposing (Plan)
-import Sudoku.Strategy.NakedSingle exposing (strategy)
+import Sudoku.Strategy.None exposing (strategy)
 import Test exposing (..)
 
 

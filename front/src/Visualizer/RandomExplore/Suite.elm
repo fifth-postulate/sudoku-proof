@@ -5,6 +5,7 @@ import Set
 import Sudoku exposing (Problem, candidatesAt, cellOptions, fill)
 import Sudoku.Cell exposing (Cell)
 import Sudoku.Domain exposing (Domain)
+import Sudoku.Strategy as Strategy exposing (Strategy)
 import Task
 import Visualizer.RandomExplore.Statistics as Statistics exposing (Statistics)
 
@@ -12,16 +13,18 @@ import Visualizer.RandomExplore.Statistics as Statistics exposing (Statistics)
 type Model
     = Suite
         { problem : Problem
+        , cheap : Strategy
         , remainingRuns : Int
         , resolutions : List Resolution
         }
     | Finished (List Resolution)
 
 
-create : Int -> Problem -> Model
-create remainingRuns problem =
+create : Strategy -> Int -> Problem -> Model
+create strategy remainingRuns problem =
     Suite
         { problem = problem
+        , cheap = strategy
         , remainingRuns = remainingRuns
         , resolutions = []
         }
@@ -74,8 +77,7 @@ update msg model =
     case ( msg, model ) of
         ( Start, Suite suite ) ->
             if suite.remainingRuns > 0 then
-                -- TODO apply cheap strategy
-                ( Suite { suite | remainingRuns = suite.remainingRuns - 1 }, do <| Examine 0 (Just suite.problem) )
+                ( Suite { suite | remainingRuns = suite.remainingRuns - 1 }, do <| Examine 0 (tryStrategy suite.cheap <| Just suite.problem) )
 
             else
                 ( Finished suite.resolutions, do Done )
@@ -119,14 +121,28 @@ update msg model =
                 result =
                     Sudoku.execute action problem
             in
-            -- TODO apply cheap strategy
-            ( model, do <| Examine (depth + 1) result )
+            ( model, do <| Examine (depth + 1) (tryStrategy suite.cheap result) )
 
         ( Done, _ ) ->
             ( model, Cmd.none )
 
         ( _, Finished _ ) ->
             ( model, Cmd.none )
+
+
+tryStrategy : Strategy -> Maybe Problem -> Maybe Problem
+tryStrategy strategy problem =
+    let
+        try : Problem -> Maybe Problem
+        try p =
+            case strategy p of
+                Just plan ->
+                    Strategy.execute plan p
+
+                Nothing ->
+                    Just p
+    in
+    Maybe.andThen try problem
 
 
 do : Msg -> Cmd Msg

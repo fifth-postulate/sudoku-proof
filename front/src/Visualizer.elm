@@ -7,7 +7,7 @@ import Html.Styled.Events as Event
 import Sudoku exposing (Problem, clue, emptySudoku)
 import Sudoku.Strategy.Combinator exposing (either, repeated)
 import Sudoku.Strategy.HiddenSingle as HiddenSingle
-import Sudoku.Strategy.NakedSingle as NakedSingle
+import Sudoku.Strategy.None as NakedSingle
 import Task
 import Visualizer.Entry as Entry
 import Visualizer.ExecuteLeastComplexPlan as Execute

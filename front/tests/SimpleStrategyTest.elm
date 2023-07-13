@@ -5,7 +5,7 @@ import Sudoku exposing (Problem, clue)
 import Sudoku.Strategy as Strategy exposing (Plan, Strategy)
 import Sudoku.Strategy.Combinator exposing (either, repeated)
 import Sudoku.Strategy.HiddenSingle as HiddenSingle
-import Sudoku.Strategy.NakedSingle as NakesSingle
+import Sudoku.Strategy.None as NakesSingle
 import Test exposing (..)
 
 
