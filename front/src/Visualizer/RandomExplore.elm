@@ -25,7 +25,10 @@ type Model
 
 type ShortCut
     = None
-    | Cheap
+    | Naked
+    | Hidden
+    | NakedHidden
+    | HiddenNaked
 
 
 fromProblem : Sudoku.Info -> Problem -> Model
@@ -33,7 +36,7 @@ fromProblem info problem =
     Model
         { info = info
         , problem = problem
-        , shortcut = Cheap
+        , shortcut = NakedHidden
         , statistics = Statistics.empty
         , suite = Nothing
         }
@@ -61,8 +64,17 @@ update msg (Model model) =
                         None ->
                             None.strategy
 
-                        Cheap ->
+                        Naked ->
+                            NakedSingle.strategy
+
+                        Hidden ->
+                            HiddenSingle.strategy
+
+                        NakedHidden ->
                             repeated (either [ NakedSingle.strategy, HiddenSingle.strategy ])
+
+                        HiddenNaked ->
+                            repeated (either [ HiddenSingle.strategy, NakedSingle.strategy ])
             in
             ( Model { model | suite = Just <| create strategy numberOfRuns model.problem }, Task.perform SuiteMsg <| Task.succeed Start )
 
@@ -130,13 +142,43 @@ viewControl ((Model m) as model) =
             , Html.input
                 [ Attribute.type_ "radio"
                 , Attribute.name "shortcut"
-                , Attribute.id "cheap"
-                , Attribute.value "cheap"
-                , Attribute.checked (m.shortcut == Cheap)
-                , Event.onCheck (\_ -> Take Cheap)
+                , Attribute.id "naked"
+                , Attribute.value "naked"
+                , Attribute.checked (m.shortcut == Naked)
+                , Event.onCheck (\_ -> Take Naked)
                 ]
                 []
-            , Html.label [ Attribute.for "cheap" ] [ Html.text "Cheap" ]
+            , Html.label [ Attribute.for "naked" ] [ Html.text "Naked" ]
+            , Html.input
+                [ Attribute.type_ "radio"
+                , Attribute.name "shortcut"
+                , Attribute.id "hidden"
+                , Attribute.value "hidden"
+                , Attribute.checked (m.shortcut == Hidden)
+                , Event.onCheck (\_ -> Take Hidden)
+                ]
+                []
+            , Html.label [ Attribute.for "hidden" ] [ Html.text "Hidden" ]
+            , Html.input
+                [ Attribute.type_ "radio"
+                , Attribute.name "shortcut"
+                , Attribute.id "nakedhidden"
+                , Attribute.value "nakedhidden"
+                , Attribute.checked (m.shortcut == NakedHidden)
+                , Event.onCheck (\_ -> Take NakedHidden)
+                ]
+                []
+            , Html.label [ Attribute.for "nakedhidden" ] [ Html.text "NakedHidden" ]
+            , Html.input
+                [ Attribute.type_ "radio"
+                , Attribute.name "shortcut"
+                , Attribute.id "hiddennaked"
+                , Attribute.value "hiddennaked"
+                , Attribute.checked (m.shortcut == HiddenNaked)
+                , Event.onCheck (\_ -> Take HiddenNaked)
+                ]
+                []
+            , Html.label [ Attribute.for "hiddennaked" ] [ Html.text "HiddenNaked" ]
             ]
         , Html.div []
             [ run 1
