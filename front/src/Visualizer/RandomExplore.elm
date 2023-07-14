@@ -65,10 +65,10 @@ update msg (Model model) =
                             None.strategy
 
                         Naked ->
-                            NakedSingle.strategy
+                            repeated NakedSingle.strategy
 
                         Hidden ->
-                            HiddenSingle.strategy
+                            repeated HiddenSingle.strategy
 
                         NakedHidden ->
                             repeated (either [ NakedSingle.strategy, HiddenSingle.strategy ])
