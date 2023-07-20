@@ -11,12 +11,20 @@ import Sudoku.Strategy exposing (Strategy)
 strategy : Strategy
 strategy problem =
     let
+        selectSingleOption cs =
+            cs
+                |> Set.toList
+                |> List.head
+                |> Maybe.withDefault -1
+
         hiddenSingles =
             Sudoku.options problem
                 |> List.map Tuple.first
                 |> List.concatMap (incidentBlocks problem)
                 |> List.map (toHiddenOptions problem)
                 |> List.filter (Tuple.second >> Set.size >> (==) 1)
+                |> List.map (Tuple.mapSecond selectSingleOption)
+                |> deduplicate
                 |> List.map toAction
     in
     if not <| List.isEmpty hiddenSingles then
@@ -51,14 +59,11 @@ hiddenOptions problem cell block =
     Set.diff candidates others
 
 
-toAction : ( Cell, Set Domain ) -> Action
-toAction ( cell, options ) =
-    let
-        d =
-            options
-                |> Set.toList
-                |> List.head
-                -- Never occurs
-                |> Maybe.withDefault -1
-    in
+deduplicate : List ( Cell, Domain ) -> List ( Cell, Domain )
+deduplicate =
+    Set.fromList >> Set.toList
+
+
+toAction : ( Cell, Domain ) -> Action
+toAction ( cell, d ) =
     Sudoku.fill cell d

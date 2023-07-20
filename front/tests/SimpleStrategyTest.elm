@@ -1,11 +1,10 @@
 module SimpleStrategyTest exposing (..)
 
-import Expect
-import Sudoku exposing (Problem, clue)
-import Sudoku.Strategy as Strategy exposing (Plan, Strategy)
+import SolveTest exposing (solveSingleStepTest, solveTest)
+import Sudoku exposing (clue)
 import Sudoku.Strategy.Combinator exposing (either, repeated)
 import Sudoku.Strategy.HiddenSingle as HiddenSingle
-import Sudoku.Strategy.None as NakesSingle
+import Sudoku.Strategy.NakedSingle as NakedSingle
 import Test exposing (..)
 
 
@@ -13,42 +12,42 @@ suite : Test
 suite =
     describe "Sudoku"
         [ describe "Strategy"
-            [ describe "HiddenSingle"
+            [ describe "[NakedSingle, HiddenSingle]"
                 [ let
                     problem =
                         Sudoku.emptySudoku 4
                             |> clue 0 1
-                            |> clue 6 2
+                            |> Maybe.andThen (clue 6 2)
 
                     expected =
                         Sudoku.emptySudoku 4
                             |> clue 0 1
-                            |> clue 6 2
-                            |> clue 1 2
-                            |> clue 7 1
-                            |> Just
+                            |> Maybe.andThen (clue 6 2)
+                            |> Maybe.andThen (clue 1 2)
+
+                    strategy =
+                        either [ NakedSingle.strategy, HiddenSingle.strategy ]
                   in
-                  solveTest "forced" problem expected
+                  solveSingleStepTest strategy "[N, H] single step" problem expected
+                ]
+            , describe "repeated [NakedSingle, HiddenSingle]"
+                [ let
+                    problem =
+                        Sudoku.emptySudoku 4
+                            |> clue 0 1
+                            |> Maybe.andThen (clue 6 2)
+
+                    expected =
+                        Sudoku.emptySudoku 4
+                            |> clue 0 1
+                            |> Maybe.andThen (clue 6 2)
+                            |> Maybe.andThen (clue 1 2)
+                            |> Maybe.andThen (clue 7 1)
+
+                    strategy =
+                        repeated <| either [ NakedSingle.strategy, HiddenSingle.strategy ]
+                  in
+                  solveTest strategy "r [N, H] single step" problem expected
                 ]
             ]
         ]
-
-
-strategy : Strategy
-strategy =
-    repeated <| either [ NakesSingle.strategy, HiddenSingle.strategy ]
-
-
-solveTest : String -> Problem -> Maybe Problem -> Test
-solveTest description problem expected =
-    test description <|
-        \_ ->
-            let
-                suggestion =
-                    strategy problem
-
-                actual =
-                    suggestion
-                        |> Maybe.map (\p -> Strategy.execute p problem)
-            in
-            Expect.equal expected actual

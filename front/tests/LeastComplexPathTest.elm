@@ -1,9 +1,9 @@
 module LeastComplexPathTest exposing (..)
 
-import Expect
-import Sudoku exposing (Problem, clue)
+import SolveTest exposing (solveSingleStepTest)
+import Sudoku exposing (clue)
 import Sudoku.Strategy exposing (Plan)
-import Sudoku.Strategy.LeastComplexPlan exposing (strategy)
+import Sudoku.Strategy.LeastComplexPlan as LeastComplexPath
 import Test exposing (..)
 
 
@@ -16,62 +16,46 @@ suite =
                     problem =
                         Sudoku.emptySudoku 4
                             |> clue 0 1
-                            |> clue 1 2
-                            |> clue 2 3
-                            |> clue 3 4
-                            |> clue 4 3
-                            |> clue 5 4
-                            |> clue 6 1
-                            |> clue 7 2
-                            |> clue 8 2
-                            |> clue 9 3
-                            |> clue 10 4
-                            |> clue 11 1
-                            |> clue 12 4
-                            |> clue 13 1
-                            |> clue 14 2
+                            |> Maybe.andThen (clue 1 2)
+                            |> Maybe.andThen (clue 2 3)
+                            |> Maybe.andThen (clue 3 4)
+                            |> Maybe.andThen (clue 4 3)
+                            |> Maybe.andThen (clue 5 4)
+                            |> Maybe.andThen (clue 6 1)
+                            |> Maybe.andThen (clue 7 2)
+                            |> Maybe.andThen (clue 8 2)
+                            |> Maybe.andThen (clue 9 3)
+                            |> Maybe.andThen (clue 10 4)
+                            |> Maybe.andThen (clue 11 1)
+                            |> Maybe.andThen (clue 12 4)
+                            |> Maybe.andThen (clue 13 1)
+                            |> Maybe.andThen (clue 14 2)
 
                     expected =
                         Sudoku.emptySudoku 4
                             |> clue 0 1
-                            |> clue 1 2
-                            |> clue 2 3
-                            |> clue 3 4
-                            |> clue 4 3
-                            |> clue 5 4
-                            |> clue 6 1
-                            |> clue 7 2
-                            |> clue 8 2
-                            |> clue 9 3
-                            |> clue 10 4
-                            |> clue 11 1
-                            |> clue 12 4
-                            |> clue 13 1
-                            |> clue 14 2
-                            |> clue 15 3
-                            |> Just
+                            |> Maybe.andThen (clue 1 2)
+                            |> Maybe.andThen (clue 2 3)
+                            |> Maybe.andThen (clue 3 4)
+                            |> Maybe.andThen (clue 4 3)
+                            |> Maybe.andThen (clue 5 4)
+                            |> Maybe.andThen (clue 6 1)
+                            |> Maybe.andThen (clue 7 2)
+                            |> Maybe.andThen (clue 8 2)
+                            |> Maybe.andThen (clue 9 3)
+                            |> Maybe.andThen (clue 10 4)
+                            |> Maybe.andThen (clue 11 1)
+                            |> Maybe.andThen (clue 12 4)
+                            |> Maybe.andThen (clue 13 1)
+                            |> Maybe.andThen (clue 14 2)
+                            |> Maybe.andThen (clue 15 3)
                   in
-                  solveTest "forced" problem expected
+                  solveSingleStepTest (LeastComplexPath.strategy complexity) "least complex path single step" problem expected
                 ]
             ]
         ]
 
 
-solveTest : String -> Problem -> Maybe Problem -> Test
-solveTest description problem expected =
-    test description <|
-        \_ ->
-            let
-                complexity : Plan -> Int
-                complexity plan =
-                    List.length plan
-
-                suggestion =
-                    strategy complexity problem
-
-                actual =
-                    suggestion
-                        |> Maybe.andThen List.head
-                        |> Maybe.map (\action -> Sudoku.execute action problem)
-            in
-            Expect.equal expected actual
+complexity : Plan -> Int
+complexity plan =
+    List.length plan

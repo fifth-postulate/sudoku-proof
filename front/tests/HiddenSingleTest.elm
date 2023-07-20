@@ -1,9 +1,8 @@
 module HiddenSingleTest exposing (..)
 
-import Expect
-import Sudoku exposing (Problem, clue)
-import Sudoku.Strategy exposing (Plan)
-import Sudoku.Strategy.HiddenSingle exposing (strategy)
+import SolveTest exposing (solveSingleStepTest)
+import Sudoku exposing (clue)
+import Sudoku.Strategy.HiddenSingle as HiddenSingle
 import Test exposing (..)
 
 
@@ -16,32 +15,15 @@ suite =
                     problem =
                         Sudoku.emptySudoku 4
                             |> clue 0 1
-                            |> clue 6 2
+                            |> Maybe.andThen (clue 6 2)
 
                     expected =
                         Sudoku.emptySudoku 4
                             |> clue 0 1
-                            |> clue 6 2
-                            |> clue 1 2
-                            |> Just
+                            |> Maybe.andThen (clue 6 2)
+                            |> Maybe.andThen (clue 1 2)
                   in
-                  solveTest "forced" problem expected
+                  solveSingleStepTest HiddenSingle.strategy "hidden single single step" problem expected
                 ]
             ]
         ]
-
-
-solveTest : String -> Problem -> Maybe Problem -> Test
-solveTest description problem expected =
-    test description <|
-        \_ ->
-            let
-                suggestion =
-                    strategy problem
-
-                actual =
-                    suggestion
-                        |> Maybe.andThen List.head
-                        |> Maybe.map (\action -> Sudoku.execute action problem)
-            in
-            Expect.equal expected actual
