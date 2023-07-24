@@ -1,8 +1,8 @@
-module Visualizer.RandomExplore.Suite exposing (Model, Msg(..), create, finished, register, update)
+module Visualizer.RandomExplore.Suite exposing (CellSelector, Model, Msg(..), create, finished, register, update)
 
 import Random exposing (generate, uniform)
-import Set
-import Sudoku exposing (Problem, candidatesAt, cellOptions, fill)
+import Set exposing (Set)
+import Sudoku exposing (Problem, candidatesAt, fill, options)
 import Sudoku.Cell exposing (Cell)
 import Sudoku.Domain exposing (Domain)
 import Sudoku.Strategy as Strategy exposing (Strategy)
@@ -14,17 +14,23 @@ type Model
     = Suite
         { problem : Problem
         , cheap : Strategy
+        , cellSelector : CellSelector
         , remainingRuns : Int
         , resolutions : List Resolution
         }
     | Finished (List Resolution)
 
 
-create : Strategy -> Int -> Problem -> Model
-create strategy remainingRuns problem =
+type alias CellSelector =
+    List ( Cell, Set Domain ) -> List ( Cell, Set Domain )
+
+
+create : Strategy -> CellSelector -> Int -> Problem -> Model
+create strategy cellSelector remainingRuns problem =
     Suite
         { problem = problem
         , cheap = strategy
+        , cellSelector = cellSelector
         , remainingRuns = remainingRuns
         , resolutions = []
         }
@@ -90,7 +96,7 @@ update msg model =
                 ( Suite { suite | resolutions = Failed depth :: suite.resolutions }, do Start )
 
             else
-                case cellOptions problem of
+                case selectCells suite.cellSelector problem of
                     c :: cs ->
                         ( model, generate (CellPicked depth problem) <| uniform c cs )
 
@@ -143,6 +149,13 @@ tryStrategy strategy problem =
                     Just p
     in
     Maybe.andThen try problem
+
+
+selectCells : CellSelector -> Problem -> List Cell
+selectCells selector problem =
+    options problem
+        |> selector
+        |> List.map Tuple.first
 
 
 do : Msg -> Cmd Msg
